@@ -1015,14 +1015,33 @@ def ask_for_paths():
     return bot_path, venv_path
 
 def patch_config(content: str, keys: dict) -> str:
-    content = re.sub(r'"tmdb_api"\s*:\s*".*?"', f'"tmdb_api": "{keys.get("tmdb_api", "")}"', content)
-    content = re.sub(r'"imgbb_api"\s*:\s*".*?"', f'"imgbb_api": "{keys.get("imgbb_api", "")}"', content)
-    content = re.sub(r'"qbit_url"\s*:\s*".*?"', f'"qbit_url": "{keys.get("qbit_url", "http://127.0.0.1")}"', content)
-    content = re.sub(r'"qbit_port"\s*:\s*".*?"', f'"qbit_port": "{keys.get("qbit_port", "8080")}"', content)
-    content = re.sub(r'"qbit_user"\s*:\s*".*?"', f'"qbit_user": "{keys.get("qbit_user", "")}"', content)
-    content = re.sub(r'"qbit_pass"\s*:\s*".*?"', f'"qbit_pass": "{keys.get("qbit_pass", "")}"', content)
+    # Escape delle API keys per evitare problemi con backreferences regex
+    def escape_for_regex(value):
+        """Escape dei caratteri speciali per l'uso in regex replacement"""
+        if not value:
+            return value
+        # Escape dei backslashes per evitare interpretazione come backreferences
+        return value.replace('\\', '\\\\')
+    
+    # Escape di tutte le keys che potrebbero contenere caratteri speciali
+    tmdb_api_escaped = escape_for_regex(keys.get("tmdb_api", ""))
+    imgbb_api_escaped = escape_for_regex(keys.get("imgbb_api", ""))
+    qbit_url_escaped = escape_for_regex(keys.get("qbit_url", "http://127.0.0.1"))
+    qbit_port_escaped = escape_for_regex(keys.get("qbit_port", "8080"))
+    qbit_user_escaped = escape_for_regex(keys.get("qbit_user", ""))
+    qbit_pass_escaped = escape_for_regex(keys.get("qbit_pass", ""))
+    shri_api_escaped = escape_for_regex(keys.get("shri_api", ""))
+    
+    content = re.sub(r'"tmdb_api"\s*:\s*".*?"', f'"tmdb_api": "{tmdb_api_escaped}"', content)
+    content = re.sub(r'"imgbb_api"\s*:\s*".*?"', f'"imgbb_api": "{imgbb_api_escaped}"', content)
+    content = re.sub(r'"qbit_url"\s*:\s*".*?"', f'"qbit_url": "{qbit_url_escaped}"', content)
+    content = re.sub(r'"qbit_port"\s*:\s*".*?"', f'"qbit_port": "{qbit_port_escaped}"', content)
+    content = re.sub(r'"qbit_user"\s*:\s*".*?"', f'"qbit_user": "{qbit_user_escaped}"', content)
+    content = re.sub(r'"qbit_pass"\s*:\s*".*?"', f'"qbit_pass": "{qbit_pass_escaped}"', content)
     content = re.sub(r'"tone_map"\s*:\s*True', '"tone_map": False', content)
-    content = re.sub(r'(\"SHRI\"\s*:\s*\{.*?)("api_key"\s*:\s*\").*?(\")', r'\1\2' + keys.get("shri_api", "") + r'\3', content, flags=re.DOTALL)
+    
+    # Fix per evitare errori "invalid group reference" quando l'API key contiene backslashes seguiti da numeri
+    content = re.sub(r'(\"SHRI\"\s*:\s*\{.*?)("api_key"\s*:\s*\").*?(\")', r'\1\2' + shri_api_escaped + r'\3', content, flags=re.DOTALL)
     content = content.replace('"add_logo": False', '"add_logo": True')
     content = content.replace('"logo_language": ""', '"logo_language": "it"')
     content = content.replace('"img_host_1": ""', '"img_host_1": "ptscreens"')
