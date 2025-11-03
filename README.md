@@ -28,7 +28,7 @@ ShareIsland
 ## **Setup:**
    - **RICHIEDE ALMENO PYTHON 3.9 E PIP3**
    - Ottieni il codice sorgente:
-      - Clona la repo sul tuo sistema `git clone https://github.com/tiberio87/SHRI-Upload-Assistant-GUI`
+      - Clona la repo sul tuo sistema `git clone https://github.com/tiberio87/SHRI-UA-GUI`
       - oppure scarica lo zip dalla pagina dei rilasci e crea/sovrascrivi una copia locale.
       - Modifica `api_keys.json` con i tuoi dati
       - Installa l'ambiente virtuale python `python -m venv .venv`
