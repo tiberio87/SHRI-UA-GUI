@@ -127,15 +127,15 @@ def show_api_keys_dialog(current_keys, empty_keys):
     
     # Titolo
     title_label = ctk.CTkLabel(
-        dialog, 
-        text="🔑 Configurazione API Keys", 
+        dialog,
+        text="🔑 CONFIGURAZIONE API KEYS",
         font=ctk.CTkFont(size=20, weight="bold")
     )
     title_label.pack(pady=20)
     
     info_label = ctk.CTkLabel(
         dialog,
-        text="Compila i campi obbligatori per continuare.\nI campi facoltativi possono essere lasciati vuoti.",
+        text="COMPILA I CAMPI OBBLIGATORI PER CONTINUARE.\nI CAMPI FACOLTATIVI POSSONO ESSERE LASCIATI VUOTI.",
         font=ctk.CTkFont(size=12)
     )
     info_label.pack(pady=(0, 20))
@@ -174,7 +174,7 @@ def show_api_keys_dialog(current_keys, empty_keys):
     
     required_info = ctk.CTkLabel(
         scroll_frame,
-        text="Questi campi devono essere compilati per utilizzare l'applicazione:",
+        text="QUESTI CAMPI DEVONO ESSERE COMPILATI PER UTILIZZARE L'APPLICAZIONE:",
         font=ctk.CTkFont(size=10),
         text_color="gray"
     )
@@ -193,7 +193,7 @@ def show_api_keys_dialog(current_keys, empty_keys):
                 label_text += f"\n{field_descriptions[key]}"
             
             label = ctk.CTkLabel(
-                field_frame, 
+                field_frame,
                 text=label_text,
                 font=ctk.CTkFont(size=11, weight="bold"),
                 anchor="w",
@@ -225,7 +225,7 @@ def show_api_keys_dialog(current_keys, empty_keys):
     
     optional_info = ctk.CTkLabel(
         scroll_frame,
-        text="Questi campi sono opzionali e possono essere configurati successivamente:",
+        text="QUESTI CAMPI SONO OPZIONALI E POSSONO ESSERE CONFIGURATI SUCCESSIVAMENTE:",
         font=ctk.CTkFont(size=10),
         text_color="gray"
     )
