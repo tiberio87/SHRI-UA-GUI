@@ -995,6 +995,13 @@ def resolve_activate_path(base_path):
     return None
 
 def ask_for_paths():
+    # Anche per la configurazione manuale, controlliamo le dipendenze di sistema
+    missing_deps = check_system_dependencies()
+    if missing_deps:
+        show_dependency_error(missing_deps)
+        app.destroy()
+        exit()
+    
     messagebox.showinfo("Configurazione manuale", "Seleziona la cartella dove si trova il BOT.")
     bot_path = filedialog.askdirectory(title="Cartella del bot Upload Assistant")
     if not bot_path:
@@ -1052,8 +1059,124 @@ def patch_config(content: str, keys: dict) -> str:
     content = content.replace('"use_italian_title": False', '"use_italian_title": True')
     return content
 
+def check_system_dependencies():
+    """Controlla che le dipendenze di sistema necessarie siano installate"""
+    missing_deps = []
+    
+    # Controlla se Git è installato
+    try:
+        result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            missing_deps.append("Git")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+        missing_deps.append("Git")
+    
+    # Controlla se Python è installato e accessibile
+    try:
+        result = subprocess.run([sys.executable, "--version"], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            missing_deps.append("Python")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+        missing_deps.append("Python")
+    
+    # Controlla se pip è disponibile
+    try:
+        result = subprocess.run([sys.executable, "-m", "pip", "--version"], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            missing_deps.append("pip")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+        missing_deps.append("pip")
+    
+    return missing_deps
+
+def show_dependency_error(missing_deps):
+    """Mostra una finestra di errore per le dipendenze mancanti con istruzioni di installazione"""
+    deps_text = "\n".join(f"• {dep}" for dep in missing_deps)
+    
+    instructions = {
+        "Git": "Scarica e installa Git da: https://git-scm.com/download/windows",
+        "Python": "Scarica e installa Python da: https://www.python.org/downloads/",
+        "pip": "pip dovrebbe essere incluso con Python. Prova a reinstallare Python."
+    }
+    
+    instruction_text = "\n\n".join(
+        f"Per installare {dep}:\n{instructions[dep]}" 
+        for dep in missing_deps if dep in instructions
+    )
+    
+    error_message = (
+        f"❌ DIPENDENZE MANCANTI\n\n"
+        f"Le seguenti dipendenze sono necessarie ma non sono state trovate:\n{deps_text}\n\n"
+        f"ISTRUZIONI DI INSTALLAZIONE:\n{instruction_text}\n\n"
+        f"Dopo aver installato le dipendenze mancanti, riavvia questa applicazione."
+    )
+    
+    messagebox.showerror("Dipendenze mancanti", error_message)
+
+def check_internet_connectivity():
+    """Controlla se c'è connettività internet"""
+    try:
+        # Prova a fare una richiesta HTTP semplice
+        import urllib.request
+        urllib.request.urlopen('https://www.google.com', timeout=10)
+        return True
+    except:
+        try:
+            # Fallback: prova GitHub direttamente
+            urllib.request.urlopen('https://github.com', timeout=10)
+            return True
+        except:
+            return False
+
+def clone_repository_with_fallback(target_dir):
+    """Tenta di clonare la repository con diverse strategie di fallback"""
+    clone_url = "https://github.com/Audionut/Upload-Assistant.git"
+    
+    # Prima controlla la connettività internet
+    status_label.configure(text="🌐 Controllo connessione internet...", text_color="yellow")
+    app.update()
+    
+    if not check_internet_connectivity():
+        return False, "Connessione internet non disponibile. Verifica la tua connessione e riprova."
+    
+    # Strategia 1: Clone normale
+    try:
+        status_label.configure(text="🔀 Clonazione Upload-Assistant (metodo 1)...", text_color="yellow")
+        app.update()
+        
+        process = subprocess.run(
+            ["git", "clone", clone_url], 
+            cwd=target_dir, 
+            capture_output=True, 
+            text=True, 
+            timeout=300  # 5 minuti timeout
+        )
+        
+        if process.returncode == 0:
+            return True, "Clonazione completata con successo"
+        else:
+            error_msg = process.stderr.strip() if process.stderr else "Errore sconosciuto"
+            return False, f"Errore git clone: {error_msg}"
+            
+    except subprocess.TimeoutExpired:
+        return False, "Timeout durante la clonazione (connessione lenta?)"
+    except Exception as e:
+        return False, f"Errore durante la clonazione: {str(e)}"
+
 def setup_from_local():
     """Setup: usa Upload-Assistant locale se presente, altrimenti lo clona automaticamente dalla repo di Audionut."""
+    
+    # === CONTROLLO DIPENDENZE ===
+    status_label.configure(text="🔍 Controllo dipendenze di sistema...", text_color="yellow")
+    app.update()
+    
+    missing_deps = check_system_dependencies()
+    if missing_deps:
+        show_dependency_error(missing_deps)
+        app.destroy()
+        exit()
+    
+    # === INIZIO SETUP ===
     progress_bar.pack(pady=(10, 0))
     progress_bar.set(0.0)
     status_label.configure(text="🔍 Preparazione setup locale...", text_color="yellow")
@@ -1080,17 +1203,31 @@ def setup_from_local():
 
         candidate = os.path.join(target_dir, "Upload-Assistant")
         if not os.path.exists(candidate) or not os.path.isdir(candidate):
-            # Clona la repo di Audionut
-            status_label.configure(text="🔀 Clonazione Upload-Assistant...", text_color="yellow")
-            app.update()
-            process = subprocess.run(["git", "clone", "https://github.com/Audionut/Upload-Assistant.git"], cwd=target_dir)
-            if process.returncode != 0:
-                messagebox.showerror("Errore", "Errore durante la clonazione della repository Upload-Assistant.")
+            # Clona la repo di Audionut con gestione errori migliorata
+            success, message = clone_repository_with_fallback(target_dir)
+            if not success:
+                messagebox.showerror(
+                    "Errore clonazione", 
+                    f"❌ Impossibile clonare la repository Upload-Assistant.\n\n"
+                    f"Dettagli errore:\n{message}\n\n"
+                    f"Possibili soluzioni:\n"
+                    f"• Verifica la connessione internet\n"
+                    f"• Controlla che Git sia installato correttamente\n"
+                    f"• Prova a clonare manualmente:\n"
+                    f"  git clone https://github.com/Audionut/Upload-Assistant.git\n\n"
+                    f"Riprova dopo aver risolto il problema."
+                )
                 app.destroy()
                 exit()
+            
             candidate = os.path.join(target_dir, "Upload-Assistant")
             if not os.path.exists(candidate) or not os.path.isdir(candidate):
-                messagebox.showerror("Errore", "Clonazione fallita: non trovo la cartella Upload-Assistant.")
+                messagebox.showerror(
+                    "Errore", 
+                    f"❌ Clonazione fallita: cartella Upload-Assistant non trovata.\n\n"
+                    f"Percorso atteso: {candidate}\n\n"
+                    f"Verifica manualmente che la cartella sia stata creata correttamente."
+                )
                 app.destroy()
                 exit()
         bot_path = candidate
@@ -1101,7 +1238,45 @@ def setup_from_local():
 
     status_label.configure(text="🔧 Creazione ambiente virtuale...", text_color="yellow")
     app.update()
-    subprocess.run(f'python -m venv "{venv_path}"', shell=True)
+    
+    try:
+        # Prova a creare l'ambiente virtuale con gestione errori
+        venv_process = subprocess.run(
+            [sys.executable, "-m", "venv", venv_path], 
+            capture_output=True, 
+            text=True, 
+            timeout=120  # 2 minuti timeout
+        )
+        
+        if venv_process.returncode != 0:
+            error_msg = venv_process.stderr.strip() if venv_process.stderr else "Errore sconosciuto"
+            messagebox.showerror(
+                "Errore ambiente virtuale",
+                f"❌ Impossibile creare l'ambiente virtuale.\n\n"
+                f"Dettagli errore:\n{error_msg}\n\n"
+                f"Possibili soluzioni:\n"
+                f"• Verifica che Python sia installato correttamente\n"
+                f"• Controlla i permessi sulla cartella di destinazione\n"
+                f"• Prova a eseguire come amministratore"
+            )
+            app.destroy()
+            exit()
+            
+    except subprocess.TimeoutExpired:
+        messagebox.showerror(
+            "Timeout",
+            "❌ Timeout durante la creazione dell'ambiente virtuale.\n\n"
+            "L'operazione ha impiegato troppo tempo. Riprova."
+        )
+        app.destroy()
+        exit()
+    except Exception as e:
+        messagebox.showerror(
+            "Errore",
+            f"❌ Errore imprevisto durante la creazione dell'ambiente virtuale:\n\n{str(e)}"
+        )
+        app.destroy()
+        exit()
 
     progress_bar.set(0.4)
     app.update()
@@ -1151,7 +1326,80 @@ def setup_from_local():
 
     status_label.configure(text="📦 Installazione dipendenze...", text_color="yellow")
     app.update()
-    subprocess.run(f'cmd.exe /c "cd /d \"{bot_path}\" && call \"{activate_path}\" && pip install -r requirements.txt"', shell=True)
+    
+    # Installazione dipendenze con gestione errori migliorata
+    try:
+        pip_exe = os.path.join(venv_path, "Scripts", "pip.exe")
+        requirements_file = os.path.join(bot_path, "requirements.txt")
+        
+        # Verifica che il file requirements.txt esista
+        if not os.path.exists(requirements_file):
+            messagebox.showwarning(
+                "File requirements.txt mancante",
+                f"⚠️ File requirements.txt non trovato in:\n{requirements_file}\n\n"
+                f"Il setup continuerà, ma potresti dover installare manualmente le dipendenze."
+            )
+        else:
+            # Installa le dipendenze
+            pip_process = subprocess.run(
+                [pip_exe, "install", "-r", requirements_file],
+                capture_output=True,
+                text=True,
+                timeout=600,  # 10 minuti timeout per pip install
+                cwd=bot_path
+            )
+            
+            if pip_process.returncode != 0:
+                error_msg = pip_process.stderr.strip() if pip_process.stderr else "Errore sconosciuto"
+                messagebox.showwarning(
+                    "Errore installazione dipendenze",
+                    f"⚠️ Alcune dipendenze potrebbero non essere state installate correttamente.\n\n"
+                    f"Dettagli errore:\n{error_msg}\n\n"
+                    f"Il setup continuerà, ma potresti dover installare manualmente alcune dipendenze.\n"
+                    f"Usa il comando: pip install -r requirements.txt"
+                )
+            else:
+                status_label.configure(text="✅ Dipendenze installate con successo!", text_color="green")
+                app.update()
+                
+    except subprocess.TimeoutExpired:
+        messagebox.showwarning(
+            "Timeout installazione",
+            "⚠️ L'installazione delle dipendenze ha impiegato troppo tempo.\n\n"
+            "Il setup continuerà, ma dovrai probabilmente completare l'installazione manualmente.\n"
+            "Usa il comando: pip install -r requirements.txt"
+        )
+    except Exception as e:
+        messagebox.showwarning(
+            "Errore",
+            f"⚠️ Errore durante l'installazione delle dipendenze:\n\n{str(e)}\n\n"
+            f"Il setup continuerà, ma dovrai installare manualmente le dipendenze."
+        )
+
+    # Test finale della configurazione
+    progress_bar.set(0.9)
+    status_label.configure(text="🔍 Verifica configurazione finale...", text_color="yellow")
+    app.update()
+    
+    # Verifica che i file essenziali esistano
+    essential_files = [
+        (os.path.join(bot_path, "upload.py"), "Script principale upload.py"),
+        (os.path.join(bot_path, "data", "config.py"), "File di configurazione config.py"),
+        (activate_path, "Script di attivazione ambiente virtuale")
+    ]
+    
+    missing_files = []
+    for file_path, description in essential_files:
+        if not os.path.exists(file_path):
+            missing_files.append(f"• {description}: {file_path}")
+    
+    if missing_files:
+        messagebox.showwarning(
+            "Setup incompleto",
+            f"⚠️ Alcuni file essenziali sono mancanti:\n\n" +
+            "\n".join(missing_files) +
+            f"\n\nIl setup potrebbe non essere completo. Verifica manualmente la configurazione."
+        )
 
     progress_bar.set(1.0)
     status_label.configure(text="✅ Setup completato!", text_color="green")
