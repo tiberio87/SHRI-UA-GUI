@@ -389,11 +389,15 @@ class IntegratedTerminal:
         self.terminal_label = ctk.CTkLabel(self.terminal_frame, text="🖥️ Terminale", font=("Arial", 16, "bold"))
         self.terminal_label.pack(pady=(10, 5))
 
-        # Area di output del terminale con font più grande
+        # Area di output del terminale con dimensioni responsive
+        # Terminale ridotto - circa metà delle dimensioni precedenti
+        terminal_height = max(8, min(15, int(self.parent.winfo_screenheight() / 72)))
+        terminal_width = max(40, min(70, int(self.parent.winfo_screenwidth() / 28)))
+        
         self.terminal_output = scrolledtext.ScrolledText(
             self.terminal_frame,
-            height=15,
-            width=80,
+            height=terminal_height,  # Altezza dinamica
+            width=terminal_width,    # Larghezza dinamica
             bg="#1a1a1a",
             fg="#00ff00",
             font=("Consolas", 12),  # Font più grande (era 10)
@@ -959,10 +963,152 @@ selected_path = ""
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+# === FUNZIONI PER RIDIMENSIONAMENTO DINAMICO ===
+def calculate_window_size():
+    """Calcola le dimensioni ottimali della finestra basandosi sulla risoluzione dello schermo"""
+    import tkinter as tk
+    
+    # Crea una finestra temporanea per ottenere info schermo
+    temp_root = tk.Tk()
+    temp_root.withdraw()  # Nasconde la finestra temporanea
+    
+    # Ottieni dimensioni schermo
+    screen_width = temp_root.winfo_screenwidth()
+    screen_height = temp_root.winfo_screenheight()
+    
+    temp_root.destroy()
+    
+    # Calcola dimensioni finestra (85% dello schermo con limiti minimi e massimi)
+    width_percentage = 0.85
+    height_percentage = 0.85
+    
+    # Dimensioni calcolate
+    calculated_width = int(screen_width * width_percentage)
+    calculated_height = int(screen_height * height_percentage)
+    
+    # Limiti minimi (per schermi molto piccoli)
+    min_width = 1200
+    min_height = 900
+    
+    # Limiti massimi (per schermi molto grandi)
+    max_width = 1800
+    max_height = 1400
+    
+    # Applica i limiti
+    window_width = max(min_width, min(calculated_width, max_width))
+    window_height = max(min_height, min(calculated_height, max_height))
+    
+    # Calcola posizione centrata
+    pos_x = (screen_width - window_width) // 2
+    pos_y = (screen_height - window_height) // 2
+    
+    return window_width, window_height, pos_x, pos_y, screen_width, screen_height
+
+def save_window_preferences():
+    """Salva le preferenze della finestra"""
+    try:
+        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
+        current_geometry = app.geometry()
+        compact_mode = getattr(app, '_compact_mode', False)
+        
+        with open(prefs_file, "w", encoding="utf-8") as f:
+            f.write(f"{current_geometry}\n{compact_mode}")
+    except:
+        pass  # Ignora errori di salvataggio
+
+def load_window_preferences():
+    """Carica le preferenze della finestra"""
+    try:
+        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
+        if os.path.exists(prefs_file):
+            with open(prefs_file, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+                if len(lines) >= 2:
+                    geometry = lines[0]
+                    compact_mode = lines[1] == 'True'
+                    return geometry, compact_mode
+    except:
+        pass
+    return None, False
+
+def setup_responsive_window(app):
+    """Configura la finestra con ridimensionamento responsivo"""
+    # Prova a caricare preferenze salvate
+    saved_geometry, saved_compact = load_window_preferences()
+    
+    if saved_geometry:
+        # Usa geometria salvata
+        app.geometry(saved_geometry)
+        app._compact_mode = saved_compact
+    else:
+        # Calcola dimensioni automatiche
+        width, height, pos_x, pos_y, screen_w, screen_h = calculate_window_size()
+        app.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+        
+        # Se lo schermo è piccolo, massimizza la finestra
+        if screen_w <= 1366 or screen_h <= 768:
+            app.state('zoomed')  # Equivalente a massimizzare su Windows
+    
+    app.resizable(True, True)
+    
+    # Imposta dimensioni minime per evitare che la finestra diventi troppo piccola
+    app.minsize(1000, 700)
+    
+    # Aggiungi callback per ridimensionamento finestra
+    app.bind('<Configure>', lambda event: on_window_resize(event, app))
+    
+    # Salva preferenze quando la finestra viene chiusa
+    app.protocol("WM_DELETE_WINDOW", lambda: (save_window_preferences(), on_closing()))
+    
+    # Messaggio di debug per il terminale (opzionale)
+    try:
+        screen_w = app.winfo_screenwidth() 
+        screen_h = app.winfo_screenheight()
+        print(f"🖥️  Risoluzione schermo rilevata: {screen_w}x{screen_h}")
+        if saved_geometry:
+            print(f"📐 Geometria ripristinata: {saved_geometry}")
+        else:
+            print(f"� Dimensioni finestra calcolate automaticamente")
+    except:
+        pass
+
+def on_window_resize(event, app):
+    """Gestisce il ridimensionamento della finestra per adattare il layout"""
+    # Questo callback viene chiamato quando la finestra viene ridimensionata
+    # Controlla che l'evento sia per la finestra principale e non per widget interni
+    if event.widget == app:
+        # Aggiorna layout se necessario
+        adjust_layout_for_size(app)
+
+def adjust_layout_for_size(app):
+    """Adatta il layout in base alle dimensioni correnti della finestra"""
+    try:
+        current_width = app.winfo_width()
+        current_height = app.winfo_height()
+        
+        # Per finestre molto piccole, nascondi alcuni elementi opzionali
+        if current_height < 800:
+            # Riduci padding per risparmiare spazio
+            for widget in app.winfo_children():
+                if hasattr(widget, 'pack_info'):
+                    info = widget.pack_info()
+                    if 'pady' in info and info['pady'] > 5:
+                        widget.pack_configure(pady=2)
+        else:
+            # Ripristina padding normale per finestre più grandi
+            for widget in app.winfo_children():
+                if hasattr(widget, 'pack_info'):
+                    widget.pack_configure(pady=5)
+                    
+    except Exception:
+        # Ignora errori durante il ridimensionamento
+        pass
+
 app = ctk.CTk()
 app.title("SHRI - Upload Assistant GUI")
-app.geometry("1400x1200")  # Finestra più grande per il font maggiore
-app.resizable(True, True)
+
+# Usa il nuovo sistema di ridimensionamento dinamico
+setup_responsive_window(app)
 
 status_label = ctk.CTkLabel(app, text="", text_color="green")
 status_label.pack(pady=10)
@@ -1504,6 +1650,7 @@ def run_upload():
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
     tag_value = tag_entry.get().strip()
+    gruppo_value = gruppo_entry.get().strip()
     service_value = service_entry.get().strip()
     edition_value = edition_entry.get().strip()
 
@@ -1520,6 +1667,8 @@ def run_upload():
         upload_cmd += f" --tmdb {tmdb_id}"
     if tag_value:
         upload_cmd += f" --tag {tag_value}"
+    if gruppo_value:
+        upload_cmd += f" --group {gruppo_value}"
     if service_value:
         upload_cmd += f" --service {service_value}"
     if edition_value:
@@ -1561,22 +1710,43 @@ tracker_option.set("")
 tracker_option.pack(pady=5)
 ToolTip(tracker_option, "Seleziona il tracker dove vuoi caricare il file.")
 
-imdb_entry = ctk.CTkEntry(app, placeholder_text="IMDb ID (opzionale)", width=240)
-imdb_entry.pack(pady=5)
+# === PRIMA RIGA: IMDB ID + TMDB ID ===
+ids_frame = ctk.CTkFrame(app)
+ids_frame.pack(pady=5, fill="x", padx=20)
+
+# Frame interno per centrare i contenuti
+ids_inner_frame = ctk.CTkFrame(ids_frame, fg_color="transparent")
+ids_inner_frame.pack(expand=True)
+
+imdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="IMDb ID (opzionale)", width=180)
+imdb_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(imdb_entry, "Inserisci l'ID IMDb (opzionale) da imdb.com\nEsempio: tt0068646 per Il Padrino.")
 
-tmdb_entry = ctk.CTkEntry(app, placeholder_text="TMDB ID (opzionale)", width=240)
-tmdb_entry.pack(pady=5)
+tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)", width=180)
+tmdb_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(tmdb_entry, "Inserisci l'ID TMDB (opzionale) da TMDB.org\nEsempio: 550 per Fight Club.")
 
-tag_entry = ctk.CTkEntry(app, placeholder_text="TAG gruppo (opzionale)", width=240)
-tag_entry.pack(pady=5)
+# === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA ===
+metadata_frame = ctk.CTkFrame(app)
+metadata_frame.pack(pady=5, fill="x", padx=20)
+
+# Frame interno per centrare i contenuti
+metadata_inner_frame = ctk.CTkFrame(metadata_frame, fg_color="transparent")
+metadata_inner_frame.pack(expand=True)
+
+tag_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="TAG gruppo (opzionale)", width=120)
+tag_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(tag_entry, "Inserisci TAG della Crew (opzionale)\nEsempio: G66, iSlaNd, LFi")
 
-service_entry = ctk.CTkEntry(app, placeholder_text="Piattaforma di streaming (opzionale)", width=240)
-service_entry.pack(pady=5)
+gruppo_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Gruppo (opzionale)", width=120)
+gruppo_entry.pack(side="left", padx=(5, 5), pady=10)
+ToolTip(gruppo_entry, "Inserisci il nome del gruppo di rilascio (opzionale)\nEsempio: SPARKS, RARBG, FGT")
+
+service_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Piattaforma streaming (opzionale)", width=120)
+service_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(service_entry, "Inserisci un nome servizio per il rilascio\n(es. NF, AMZN, ATVP, DSNP, NOW).")
 
+# === TERZA RIGA: EDIZIONE DA SOLA ===
 edition_entry = ctk.CTkEntry(app, placeholder_text="Aggiungi edizione (opzionale)", width=240)
 edition_entry.pack(pady=5)
 ToolTip(edition_entry, "Inserisci una versione speciale del film (opzionale).\nEsempio: HYBRID, Extended, Remastered, Director's Cut.")
@@ -1614,12 +1784,129 @@ status_label.pack(pady=10)
 # Aggiungi il terminale alla GUI
 terminal.pack(fill="both", expand=True, padx=10, pady=10)
 
+# === MODALITÀ VISUALIZZAZIONE ===
+def toggle_compact_mode():
+    """Attiva/disattiva la modalità compatta per schermi piccoli"""
+    current_height = app.winfo_height()
+    current_width = app.winfo_width()
+    
+    if hasattr(app, '_compact_mode') and app._compact_mode:
+        # Disattiva modalità compatta
+        app._compact_mode = False
+        compact_btn.configure(text="📱 Modalità Compatta", fg_color="gray")
+        
+        # Ripristina dimensioni normali
+        width, height, pos_x, pos_y, _, _ = calculate_window_size()
+        app.geometry(f"{width}x{height}")
+        
+        # Ripristina padding normale
+        for widget in app.winfo_children():
+            if hasattr(widget, 'pack_configure'):
+                try:
+                    widget.pack_configure(pady=5)
+                except:
+                    pass
+    else:
+        # Attiva modalità compatta
+        app._compact_mode = True
+        compact_btn.configure(text="🖥️ Modalità Normale", fg_color="orange")
+        
+        # Ridimensiona per modalità compatta
+        compact_width = min(1200, app.winfo_screenwidth() - 100)
+        compact_height = min(900, app.winfo_screenheight() - 100)
+        app.geometry(f"{compact_width}x{compact_height}")
+        
+        # Riduci padding
+        for widget in app.winfo_children():
+            if hasattr(widget, 'pack_configure'):
+                try:
+                    widget.pack_configure(pady=2)
+                except:
+                    pass
+
+def auto_detect_best_layout():
+    """Auto-rileva il layout migliore per la risoluzione corrente"""
+    try:
+        screen_w = app.winfo_screenwidth()
+        screen_h = app.winfo_screenheight()
+        
+        # Per schermi piccoli, suggerisci modalità compatta
+        if screen_w <= 1366 or screen_h <= 768:
+            # Mostra suggerimento solo se non ci sono preferenze salvate
+            _, saved_compact = load_window_preferences()
+            prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
+            
+            if not os.path.exists(prefs_file):
+                # Prima volta: mostra suggerimento
+                from tkinter import messagebox
+                suggest_compact = messagebox.askyesno(
+                    "Risoluzione Ottimale",
+                    f"🖥️ Risoluzione rilevata: {screen_w}x{screen_h}\n\n"
+                    f"Per questa risoluzione è consigliata la modalità compatta.\n"
+                    f"Vuoi attivarla automaticamente?\n\n"
+                    f"Potrai sempre cambiarla usando il pulsante 'Modalità Compatta'.",
+                    icon='question'
+                )
+                
+                if suggest_compact:
+                    # Attiva modalità compatta dopo un breve delay
+                    app.after(1000, toggle_compact_mode)
+                    
+        # Aggiorna il pulsante in base alla modalità corrente
+        if hasattr(app, '_compact_mode') and app._compact_mode:
+            compact_btn.configure(text="🖥️ Modalità Normale", fg_color="orange")
+        
+    except Exception as e:
+        print(f"Errore auto-rilevamento layout: {e}")
+
+# Pulsante per modalità compatta
+compact_btn = ctk.CTkButton(
+    app, 
+    text="📱 Modalità Compatta", 
+    command=toggle_compact_mode,
+    width=150,
+    fg_color="gray",
+    hover_color="darkgray"
+)
+compact_btn.pack(pady=5)
+ToolTip(compact_btn, "Attiva/disattiva modalità compatta per schermi piccoli")
+
 # Funzione per chiudere il terminale quando l'app viene chiusa
 def on_closing():
     terminal.close_terminal()
     app.destroy()
 
-app.protocol("WM_DELETE_WINDOW", on_closing)
+# === INFORMAZIONI SISTEMA ===
+def update_window_info():
+    """Aggiorna le informazioni sulla finestra e risoluzione"""
+    try:
+        screen_w = app.winfo_screenwidth()
+        screen_h = app.winfo_screenheight()
+        window_w = app.winfo_width()
+        window_h = app.winfo_height()
+        
+        info_text = f"Schermo: {screen_w}x{screen_h} | Finestra: {window_w}x{window_h}"
+        if hasattr(app, '_compact_mode') and app._compact_mode:
+            info_text += " | Modalità Compatta"
+        
+        info_label.configure(text=info_text)
+    except:
+        info_label.configure(text="Informazioni non disponibili")
+
+# Etichetta informazioni sistema
+info_label = ctk.CTkLabel(app, text="", font=("Arial", 10), text_color="gray")
+info_label.pack(pady=2)
+
+# Aggiorna info ogni 2 secondi
+def periodic_update():
+    update_window_info()
+    app.after(2000, periodic_update)
+
+# Avvia aggiornamento periodico
+app.after(1000, periodic_update)
+
+# Auto-rileva il layout migliore
+app.after(2000, auto_detect_best_layout)
 
 ctk.CTkLabel(app, text="Authors: Tiberio87").pack(pady=5)
 
