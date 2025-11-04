@@ -390,9 +390,9 @@ class IntegratedTerminal:
         self.terminal_label.pack(pady=(10, 5))
 
         # Area di output del terminale con dimensioni responsive
-        # Calcola altezza dinamica basata sulla finestra
-        terminal_height = max(12, min(25, int(self.parent.winfo_screenheight() / 50)))
-        terminal_width = max(70, min(120, int(self.parent.winfo_screenwidth() / 20)))
+        # Terminale ridotto - circa metà delle dimensioni precedenti
+        terminal_height = max(8, min(15, int(self.parent.winfo_screenheight() / 72)))
+        terminal_width = max(40, min(70, int(self.parent.winfo_screenwidth() / 28)))
         
         self.terminal_output = scrolledtext.ScrolledText(
             self.terminal_frame,
@@ -1004,6 +1004,33 @@ def calculate_window_size():
     
     return window_width, window_height, pos_x, pos_y, screen_width, screen_height
 
+def save_window_preferences():
+    """Salva le preferenze della finestra"""
+    try:
+        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
+        current_geometry = app.geometry()
+        compact_mode = getattr(app, '_compact_mode', False)
+        
+        with open(prefs_file, "w", encoding="utf-8") as f:
+            f.write(f"{current_geometry}\n{compact_mode}")
+    except:
+        pass  # Ignora errori di salvataggio
+
+def load_window_preferences():
+    """Carica le preferenze della finestra"""
+    try:
+        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
+        if os.path.exists(prefs_file):
+            with open(prefs_file, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+                if len(lines) >= 2:
+                    geometry = lines[0]
+                    compact_mode = lines[1] == 'True'
+                    return geometry, compact_mode
+    except:
+        pass
+    return None, False
+
 def setup_responsive_window(app):
     """Configura la finestra con ridimensionamento responsivo"""
     # Prova a caricare preferenze salvate
@@ -1103,33 +1130,6 @@ def load_config() -> tuple[str | None, str | None]:
             if len(lines) >= 2:
                 return lines[0], lines[1]
     return None, None
-
-def save_window_preferences():
-    """Salva le preferenze della finestra"""
-    try:
-        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
-        current_geometry = app.geometry()
-        compact_mode = getattr(app, '_compact_mode', False)
-        
-        with open(prefs_file, "w", encoding="utf-8") as f:
-            f.write(f"{current_geometry}\n{compact_mode}")
-    except:
-        pass  # Ignora errori di salvataggio
-
-def load_window_preferences():
-    """Carica le preferenze della finestra"""
-    try:
-        prefs_file = CONFIG_FILE.replace('.txt', '_window.txt')
-        if os.path.exists(prefs_file):
-            with open(prefs_file, "r", encoding="utf-8") as f:
-                lines = f.read().splitlines()
-                if len(lines) >= 2:
-                    geometry = lines[0]
-                    compact_mode = lines[1] == 'True'
-                    return geometry, compact_mode
-    except:
-        pass
-    return None, False
 
 def resolve_activate_path(base_path):
     direct = os.path.join(base_path, "activate.bat")
@@ -1650,6 +1650,7 @@ def run_upload():
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
     tag_value = tag_entry.get().strip()
+    gruppo_value = gruppo_entry.get().strip()
     service_value = service_entry.get().strip()
     edition_value = edition_entry.get().strip()
 
@@ -1666,6 +1667,8 @@ def run_upload():
         upload_cmd += f" --tmdb {tmdb_id}"
     if tag_value:
         upload_cmd += f" --tag {tag_value}"
+    if gruppo_value:
+        upload_cmd += f" --group {gruppo_value}"
     if service_value:
         upload_cmd += f" --service {service_value}"
     if edition_value:
@@ -1707,22 +1710,43 @@ tracker_option.set("")
 tracker_option.pack(pady=5)
 ToolTip(tracker_option, "Seleziona il tracker dove vuoi caricare il file.")
 
-imdb_entry = ctk.CTkEntry(app, placeholder_text="IMDb ID (opzionale)", width=240)
-imdb_entry.pack(pady=5)
+# === PRIMA RIGA: IMDB ID + TMDB ID ===
+ids_frame = ctk.CTkFrame(app)
+ids_frame.pack(pady=5, fill="x", padx=20)
+
+# Frame interno per centrare i contenuti
+ids_inner_frame = ctk.CTkFrame(ids_frame, fg_color="transparent")
+ids_inner_frame.pack(expand=True)
+
+imdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="IMDb ID (opzionale)", width=180)
+imdb_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(imdb_entry, "Inserisci l'ID IMDb (opzionale) da imdb.com\nEsempio: tt0068646 per Il Padrino.")
 
-tmdb_entry = ctk.CTkEntry(app, placeholder_text="TMDB ID (opzionale)", width=240)
-tmdb_entry.pack(pady=5)
+tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)", width=180)
+tmdb_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(tmdb_entry, "Inserisci l'ID TMDB (opzionale) da TMDB.org\nEsempio: 550 per Fight Club.")
 
-tag_entry = ctk.CTkEntry(app, placeholder_text="TAG gruppo (opzionale)", width=240)
-tag_entry.pack(pady=5)
+# === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA ===
+metadata_frame = ctk.CTkFrame(app)
+metadata_frame.pack(pady=5, fill="x", padx=20)
+
+# Frame interno per centrare i contenuti
+metadata_inner_frame = ctk.CTkFrame(metadata_frame, fg_color="transparent")
+metadata_inner_frame.pack(expand=True)
+
+tag_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="TAG gruppo (opzionale)", width=120)
+tag_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(tag_entry, "Inserisci TAG della Crew (opzionale)\nEsempio: G66, iSlaNd, LFi")
 
-service_entry = ctk.CTkEntry(app, placeholder_text="Piattaforma di streaming (opzionale)", width=240)
-service_entry.pack(pady=5)
+gruppo_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Gruppo (opzionale)", width=120)
+gruppo_entry.pack(side="left", padx=(5, 5), pady=10)
+ToolTip(gruppo_entry, "Inserisci il nome del gruppo di rilascio (opzionale)\nEsempio: SPARKS, RARBG, FGT")
+
+service_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Piattaforma streaming (opzionale)", width=120)
+service_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(service_entry, "Inserisci un nome servizio per il rilascio\n(es. NF, AMZN, ATVP, DSNP, NOW).")
 
+# === TERZA RIGA: EDIZIONE DA SOLA ===
 edition_entry = ctk.CTkEntry(app, placeholder_text="Aggiungi edizione (opzionale)", width=240)
 edition_entry.pack(pady=5)
 ToolTip(edition_entry, "Inserisci una versione speciale del film (opzionale).\nEsempio: HYBRID, Extended, Remastered, Director's Cut.")
