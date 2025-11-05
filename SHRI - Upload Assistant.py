@@ -1107,6 +1107,19 @@ app.title("SHRI - Upload Assistant GUI")
 setup_responsive_window(app)
 
 # === FUNZIONI DI CONFIGURAZIONE ===
+def safe_update_status(message, color="green"):
+    """Aggiorna lo status in modo sicuro, anche se status_label non è ancora creata"""
+    try:
+        if 'status_label' in globals() and status_label is not None:
+            status_label.configure(text=message, text_color=color)
+            if 'app' in globals() and app is not None:
+                app.update()
+        else:
+            # Se status_label non è ancora creata, stampa nel terminale
+            print(f"Status: {message}")
+    except Exception as e:
+        print(f"Status: {message} (Error updating GUI: {e})")
+
 def save_config(bot_path: str, venv_path: str) -> None:
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         f.write(f"{bot_path}\n{venv_path}")
@@ -1267,16 +1280,14 @@ def clone_repository_with_fallback(target_dir):
     clone_url = "https://github.com/Audionut/Upload-Assistant.git"
     
     # Prima controlla la connettività internet
-    status_label.configure(text="🌐 Controllo connessione internet...", text_color="yellow")
-    app.update()
+    safe_update_status("🌐 Controllo connessione internet...", "yellow")
     
     if not check_internet_connectivity():
         return False, "Connessione internet non disponibile. Verifica la tua connessione e riprova."
     
     # Strategia 1: Clone normale
     try:
-        status_label.configure(text="🔀 Clonazione Upload-Assistant (metodo 1)...", text_color="yellow")
-        app.update()
+        safe_update_status("🔀 Clonazione Upload-Assistant (metodo 1)...", "yellow")
         
         process = subprocess.run(
             ["git", "clone", clone_url], 
@@ -1301,8 +1312,7 @@ def setup_from_local():
     """Setup: usa Upload-Assistant locale se presente, altrimenti lo clona automaticamente dalla repo di Audionut."""
     
     # === CONTROLLO DIPENDENZE ===
-    status_label.configure(text="🔍 Controllo dipendenze di sistema...", text_color="yellow")
-    app.update()
+    safe_update_status("🔍 Controllo dipendenze di sistema...", "yellow")
     
     missing_deps = check_system_dependencies()
     if missing_deps:
@@ -1311,8 +1321,7 @@ def setup_from_local():
         exit()
     
     # === INIZIO SETUP ===
-    status_label.configure(text="🔍 Preparazione setup locale...", text_color="yellow")
-    app.update()
+    safe_update_status("🔍 Preparazione setup locale...", "yellow")
 
     repo_root = os.path.abspath(os.path.dirname(__file__))
     detected_bot = os.path.join(repo_root, "Upload-Assistant")
@@ -1367,8 +1376,7 @@ def setup_from_local():
     app.update()
     venv_path = os.path.join(bot_path, ".venv")
 
-    status_label.configure(text="🔧 Creazione ambiente virtuale...", text_color="yellow")
-    app.update()
+    safe_update_status("🔧 Creazione ambiente virtuale...", "yellow")
     
     try:
         # Prova a creare l'ambiente virtuale con gestione errori
@@ -1417,8 +1425,7 @@ def setup_from_local():
         app.destroy()
         exit()
 
-    status_label.configure(text="⚙️ Configurazione file...", text_color="yellow")
-    app.update()
+    safe_update_status("⚙️ Configurazione file...", "yellow")
 
     example_cfg = os.path.join(bot_path, "data", "example-config.py")
     target_cfg = os.path.join(bot_path, "data", "config.py")
@@ -1453,8 +1460,7 @@ def setup_from_local():
 
     app.update()
 
-    status_label.configure(text="📦 Installazione dipendenze...", text_color="yellow")
-    app.update()
+    safe_update_status("📦 Installazione dipendenze...", "yellow")
     
     # Installazione dipendenze con gestione errori migliorata
     try:
@@ -1488,8 +1494,7 @@ def setup_from_local():
                     f"Usa il comando: pip install -r requirements.txt"
                 )
             else:
-                status_label.configure(text="✅ Dipendenze installate con successo!", text_color="green")
-                app.update()
+                safe_update_status("✅ Dipendenze installate con successo!", "green")
                 
     except subprocess.TimeoutExpired:
         messagebox.showwarning(
@@ -1506,8 +1511,7 @@ def setup_from_local():
         )
 
     # Test finale della configurazione
-    status_label.configure(text="🔍 Verifica configurazione finale...", text_color="yellow")
-    app.update()
+    safe_update_status("🔍 Verifica configurazione finale...", "yellow")
     
     # Verifica che i file essenziali esistano
     essential_files = [
@@ -1529,8 +1533,7 @@ def setup_from_local():
             f"\n\nIl setup potrebbe non essere completo. Verifica manualmente la configurazione."
         )
 
-    status_label.configure(text="✅ Setup completato!", text_color="green")
-    app.update()
+    safe_update_status("✅ Setup completato!", "green")
 
     save_config(bot_path, venv_path)
     app.update()
@@ -1590,18 +1593,16 @@ def open_config_py():
         messagebox.showerror("Errore", f"Impossibile aprire config.py\n{e}")
 
 def run_git_pull():
-    status_label.configure(text="🔄 Controllo aggiornamenti Bot...", text_color="yellow")
-    app.update()
+    safe_update_status("🔄 Controllo aggiornamenti Bot...", "yellow")
 
     # Cambia directory e esegue git pull nel terminale integrato
     terminal.execute_script_command(f'cd "{bot_path}"')
     terminal.execute_script_command('git pull')
 
-    status_label.configure(text="✅ Comando git pull inviato", text_color="green")
+    safe_update_status("✅ Comando git pull inviato", "green")
 
 def run_pip_install():
-    status_label.configure(text="🔄 Controllo aggiornamenti pip...", text_color="yellow")
-    app.update()
+    safe_update_status("🔄 Controllo aggiornamenti pip...", "yellow")
 
     # Attiva l'ambiente virtuale e installa i requirements nel terminale integrato
     terminal.execute_script_command(f'cd "{bot_path}"')
@@ -1615,11 +1616,11 @@ def run_pip_install():
     else:
         terminal.execute_script_command('pip install -r requirements.txt')
 
-    status_label.configure(text="✅ Comando pip install inviato", text_color="green")
+    safe_update_status("✅ Comando pip install inviato", "green")
 
 def run_upload():
     if not selected_path or not os.path.exists(selected_path):
-        status_label.configure(text="❌ Percorso non valido", text_color="red")
+        safe_update_status("❌ Percorso non valido", "red")
         return
 
     tracker = "SHRI"  # Tracker fisso impostato su SHRI
@@ -1661,7 +1662,7 @@ def run_upload():
     else:
         terminal.execute_script_command(upload_cmd)
 
-#    status_label.configure(text="✅ Upload avviato nel terminale...", text_color="green")
+    safe_update_status("✅ Upload avviato nel terminale...", "green")
 
 # === LAYOUT ===
 ctk.CTkLabel(app, text="Seleziona il tipo di rilascio").pack(pady=(15, 0))
