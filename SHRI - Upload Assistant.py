@@ -385,10 +385,6 @@ class IntegratedTerminal:
         # Frame per il terminale
         self.terminal_frame = ctk.CTkFrame(parent)
 
-        # Etichetta del terminale
-        self.terminal_label = ctk.CTkLabel(self.terminal_frame, text="🖥️ Terminale", font=("Arial", 16, "bold"))
-        self.terminal_label.pack(pady=(10, 5))
-
         # Area di output del terminale con dimensioni responsive
         # Terminale ridotto - circa metà delle dimensioni precedenti
         terminal_height = max(8, min(15, int(self.parent.winfo_screenheight() / 72)))
@@ -1110,14 +1106,6 @@ app.title("SHRI - Upload Assistant GUI")
 # Usa il nuovo sistema di ridimensionamento dinamico
 setup_responsive_window(app)
 
-status_label = ctk.CTkLabel(app, text="", text_color="green")
-status_label.pack(pady=10)
-
-progress_bar = ctk.CTkProgressBar(app, width=400)
-progress_bar.set(0)
-progress_bar.pack(pady=(10, 0))
-progress_bar.pack_forget()
-
 # === FUNZIONI DI CONFIGURAZIONE ===
 def save_config(bot_path: str, venv_path: str) -> None:
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -1323,8 +1311,6 @@ def setup_from_local():
         exit()
     
     # === INIZIO SETUP ===
-    progress_bar.pack(pady=(10, 0))
-    progress_bar.set(0.0)
     status_label.configure(text="🔍 Preparazione setup locale...", text_color="yellow")
     app.update()
 
@@ -1378,7 +1364,6 @@ def setup_from_local():
                 exit()
         bot_path = candidate
 
-    progress_bar.set(0.2)
     app.update()
     venv_path = os.path.join(bot_path, ".venv")
 
@@ -1424,7 +1409,6 @@ def setup_from_local():
         app.destroy()
         exit()
 
-    progress_bar.set(0.4)
     app.update()
 
     activate_path = resolve_activate_path(venv_path)
@@ -1467,7 +1451,6 @@ def setup_from_local():
         app.destroy()
         exit()
 
-    progress_bar.set(0.7)
     app.update()
 
     status_label.configure(text="📦 Installazione dipendenze...", text_color="yellow")
@@ -1523,7 +1506,6 @@ def setup_from_local():
         )
 
     # Test finale della configurazione
-    progress_bar.set(0.9)
     status_label.configure(text="🔍 Verifica configurazione finale...", text_color="yellow")
     app.update()
     
@@ -1547,12 +1529,10 @@ def setup_from_local():
             f"\n\nIl setup potrebbe non essere completo. Verifica manualmente la configurazione."
         )
 
-    progress_bar.set(1.0)
     status_label.configure(text="✅ Setup completato!", text_color="green")
     app.update()
 
     save_config(bot_path, venv_path)
-    progress_bar.pack_forget()
     app.update()
 
     return bot_path, venv_path
@@ -1610,7 +1590,6 @@ def open_config_py():
         messagebox.showerror("Errore", f"Impossibile aprire config.py\n{e}")
 
 def run_git_pull():
-    progress_bar.set(0.0)
     status_label.configure(text="🔄 Controllo aggiornamenti Bot...", text_color="yellow")
     app.update()
 
@@ -1618,11 +1597,9 @@ def run_git_pull():
     terminal.execute_script_command(f'cd "{bot_path}"')
     terminal.execute_script_command('git pull')
 
-    progress_bar.set(1.0)
     status_label.configure(text="✅ Comando git pull inviato", text_color="green")
 
 def run_pip_install():
-    progress_bar.set(0.0)
     status_label.configure(text="🔄 Controllo aggiornamenti pip...", text_color="yellow")
     app.update()
 
@@ -1638,7 +1615,6 @@ def run_pip_install():
     else:
         terminal.execute_script_command('pip install -r requirements.txt')
 
-    progress_bar.set(1.0)
     status_label.configure(text="✅ Comando pip install inviato", text_color="green")
 
 def run_upload():
@@ -1646,11 +1622,10 @@ def run_upload():
         status_label.configure(text="❌ Percorso non valido", text_color="red")
         return
 
-    tracker = tracker_option.get().strip().upper()
+    tracker = "SHRI"  # Tracker fisso impostato su SHRI
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
     tag_value = tag_entry.get().strip()
-    gruppo_value = gruppo_entry.get().strip()
     service_value = service_entry.get().strip()
     edition_value = edition_entry.get().strip()
 
@@ -1667,8 +1642,6 @@ def run_upload():
         upload_cmd += f" --tmdb {tmdb_id}"
     if tag_value:
         upload_cmd += f" --tag {tag_value}"
-    if gruppo_value:
-        upload_cmd += f" --group {gruppo_value}"
     if service_value:
         upload_cmd += f" --service {service_value}"
     if edition_value:
@@ -1688,7 +1661,7 @@ def run_upload():
     else:
         terminal.execute_script_command(upload_cmd)
 
-    status_label.configure(text="✅ Upload avviato nel terminale...", text_color="green")
+#    status_label.configure(text="✅ Upload avviato nel terminale...", text_color="green")
 
 # === LAYOUT ===
 ctk.CTkLabel(app, text="Seleziona il tipo di rilascio").pack(pady=(15, 0))
@@ -1704,12 +1677,6 @@ ToolTip(select_btn, "Seleziona un file .mkv o una cartella a seconda del tipo sc
 path_label = ctk.CTkLabel(app, text="Non hai effettuato nessuna selezione")
 path_label.pack(pady=5)
 
-ctk.CTkLabel(app, text="Tracker").pack(pady=(10, 0))
-tracker_option = ctk.CTkComboBox(app, values=["SHRI"], width=120)
-tracker_option.set("")
-tracker_option.pack(pady=5)
-ToolTip(tracker_option, "Seleziona il tracker dove vuoi caricare il file.")
-
 # === PRIMA RIGA: IMDB ID + TMDB ID ===
 ids_frame = ctk.CTkFrame(app)
 ids_frame.pack(pady=5, fill="x", padx=20)
@@ -1718,15 +1685,15 @@ ids_frame.pack(pady=5, fill="x", padx=20)
 ids_inner_frame = ctk.CTkFrame(ids_frame, fg_color="transparent")
 ids_inner_frame.pack(expand=True)
 
-imdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="IMDb ID (opzionale)", width=180)
+imdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="IMDb ID (opzionale)", width=140)
 imdb_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(imdb_entry, "Inserisci l'ID IMDb (opzionale) da imdb.com\nEsempio: tt0068646 per Il Padrino.")
 
-tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)", width=180)
+tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)", width=140)
 tmdb_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(tmdb_entry, "Inserisci l'ID TMDB (opzionale) da TMDB.org\nEsempio: 550 per Fight Club.")
 
-# === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA ===
+# === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA + EDIZIONE ===
 metadata_frame = ctk.CTkFrame(app)
 metadata_frame.pack(pady=5, fill="x", padx=20)
 
@@ -1734,21 +1701,16 @@ metadata_frame.pack(pady=5, fill="x", padx=20)
 metadata_inner_frame = ctk.CTkFrame(metadata_frame, fg_color="transparent")
 metadata_inner_frame.pack(expand=True)
 
-tag_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="TAG gruppo (opzionale)", width=120)
+tag_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="TAG gruppo (opzionale)", width=150)
 tag_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(tag_entry, "Inserisci TAG della Crew (opzionale)\nEsempio: G66, iSlaNd, LFi")
 
-gruppo_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Gruppo (opzionale)", width=120)
-gruppo_entry.pack(side="left", padx=(5, 5), pady=10)
-ToolTip(gruppo_entry, "Inserisci il nome del gruppo di rilascio (opzionale)\nEsempio: SPARKS, RARBG, FGT")
-
-service_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Piattaforma streaming (opzionale)", width=120)
-service_entry.pack(side="left", padx=(5, 10), pady=10)
+service_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Piattaforma streaming (opzionale)", width=150)
+service_entry.pack(side="left", padx=(5, 5), pady=10)
 ToolTip(service_entry, "Inserisci un nome servizio per il rilascio\n(es. NF, AMZN, ATVP, DSNP, NOW).")
 
-# === TERZA RIGA: EDIZIONE DA SOLA ===
-edition_entry = ctk.CTkEntry(app, placeholder_text="Aggiungi edizione (opzionale)", width=240)
-edition_entry.pack(pady=5)
+edition_entry = ctk.CTkEntry(metadata_inner_frame, placeholder_text="Edizione (opzionale)", width=150)
+edition_entry.pack(side="left", padx=(5, 10), pady=10)
 ToolTip(edition_entry, "Inserisci una versione speciale del film (opzionale).\nEsempio: HYBRID, Extended, Remastered, Director's Cut.")
 
 
@@ -1773,10 +1735,6 @@ ToolTip(pip_btn, "Esegui pip install per aggiornare le dipendenze del progetto."
 config_btn = ctk.CTkButton(app, text="Modifica Config.py", command=open_config_py, fg_color="blue", hover_color="darkblue", text_color="white")
 config_btn.pack(pady=5)
 ToolTip(config_btn, "Apri il file config.py per modificare la configurazione del bot.")
-
-progress_bar = ctk.CTkProgressBar(app, width=400)
-progress_bar.set(0)
-progress_bar.pack(pady=(10, 0))
 
 status_label = ctk.CTkLabel(app, text="", text_color="green")
 status_label.pack(pady=10)
