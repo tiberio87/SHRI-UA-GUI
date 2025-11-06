@@ -30,7 +30,7 @@ ShareIsland
 ### 📋 **Prerequisiti:**
 Prima di iniziare, assicurati di avere installato:
 
-1. **Git** - [Scarica da qui](https://git-scm.com/download/windows)
+1. **Git** - [Scarica da qui](https://git-scm.com/install/windows)
 2. **Python 3.9+** - [Scarica da qui](https://www.python.org/downloads/)
 3. **FFmpeg** (opzionale ma consigliato) - Installa con: `winget install ffmpeg`
 
