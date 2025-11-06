@@ -152,6 +152,9 @@ git pull origin main
 - Verifica la connessione internet
 - Prova a clonare manualmente: `git clone https://github.com/Audionut/Upload-Assistant.git`
 
+**"La GUI si blocca":**
+- Premere il tasto giallo RESET GUI
+
 ### 🆘 **Supporto:**
 - Controlla i [Issues](https://github.com/tiberio87/SHRI-UA-GUI/issues) per problemi noti
 - Crea un nuovo issue per segnalare bug
