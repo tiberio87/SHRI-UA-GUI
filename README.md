@@ -83,7 +83,12 @@ Prima di iniziare, assicurati di avere installato:
    - Clona questa repository: `git clone https://github.com/tiberio87/SHRI-UA-GUI`
    - Oppure scarica lo ZIP dai [Releases](https://github.com/tiberio87/SHRI-UA-GUI/releases)
 
-2. **Prepara il file API Keys:**
+2. **Installa la dipendenza GUI:**
+   - Apri PowerShell o Prompt dei Comandi
+   - Esegui: `pip install customtkinter`
+   - Questa è l'unica dipendenza necessaria per avviare la GUI
+
+3. **Prepara il file API Keys:**
    - Crea un file `api_keys.json` nella stessa cartella dell'applicazione
    - Struttura minima richiesta:
    ```json
@@ -99,7 +104,7 @@ Prima di iniziare, assicurati di avere installato:
    }
    ```
 
-3. **Avvia l'applicazione:**
+4. **Avvia l'applicazione:**
    - Esegui: `python "SHRI - Upload Assistant.py"`
    - Al primo avvio, clicca **"Setup da locale"**
    - L'applicazione farà tutto automaticamente:
