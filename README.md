@@ -25,22 +25,137 @@ Un ringraziamento speciale a lui per aver creato questo progetto.
 
 ShareIsland
 
-## **Setup:**
-   - **RICHIEDE ALMENO PYTHON 3.9 E PIP3**
-   - Ottieni il codice sorgente:
-      - Clona la repo sul tuo sistema `git clone https://github.com/tiberio87/SHRI-UA-GUI`
-      - oppure scarica lo zip dalla pagina dei rilasci e crea/sovrascrivi una copia locale.
-      - Modifica `api_keys.json` con i tuoi dati
-      - Installa l'ambiente virtuale python `python -m venv .venv`
-      - Attiva l'ambiente virtuale `.venv\Scripts\activate`
-      - Installa i moduli python necessari `pip install -r requirements.txt`
-   - Modifica (se necessario) `config.py` con i tuoi dati
-      - La chiave tmdb_api si ottiene da https://www.themoviedb.org/settings/api
-      - Le chiavi API degli host immagini si ottengono dai rispettivi siti
+## **Setup Automatico (Consigliato):**
+
+### 📋 **Prerequisiti:**
+Prima di iniziare, assicurati di avere installato:
+
+1. **Git** - [Scarica da qui](https://git-scm.com/download/windows)
+2. **Python 3.9+** - [Scarica da qui](https://www.python.org/downloads/)
+3. **FFmpeg** (opzionale ma consigliato) - Installa con: `winget install ffmpeg`
+
+### 🚀 **Installazione Rapida:**
+
+1. **Scarica l'applicazione:**
+   - Clona questa repository: `git clone https://github.com/tiberio87/SHRI-UA-GUI`
+   - Oppure scarica lo ZIP dai [Releases](https://github.com/tiberio87/SHRI-UA-GUI/releases)
+
+2. **Prepara il file API Keys:**
+   - Crea un file `api_keys.json` nella stessa cartella dell'applicazione
+   - Struttura minima richiesta:
+   ```json
+   {
+     "tmdb_api": "la_tua_api_key_tmdb",
+     "shri_api": "la_tua_api_key_shri",
+     "imgbb_api": "",
+     "discord_webhook": "",
+     "qbit_url": "http://localhost",
+     "qbit_port": "8080",
+     "qbit_user": "",
+     "qbit_pass": ""
+   }
+   ```
+
+3. **Avvia l'applicazione:**
+   - Esegui: `python "SHRI - Upload Assistant.py"`
+   - Al primo avvio, clicca **"Setup da locale"**
+   - L'applicazione farà tutto automaticamente:
+     - ✅ Controlla le dipendenze di sistema
+     - ✅ Verifica FFmpeg (con guida di installazione se mancante)
+     - ✅ Scarica Upload-Assistant di Audionut
+     - ✅ Crea l'ambiente virtuale
+     - ✅ Installa tutte le dipendenze
+     - ✅ Configura automaticamente i file
+
+### 🔑 **Configurazione API Keys:**
+
+**Dove ottenere le chiavi:**
+- **TMDB API**: [Registrati su TMDB](https://www.themoviedb.org/settings/api)
+- **SHRI API**: Fornita dal tracker ShareIsland
+- **ImgBB API** (opzionale): [Registrati su ImgBB](https://api.imgbb.com/)
+
+**Durante il setup automatico:**
+- L'applicazione rileverà automaticamente le chiavi mancanti
+- Ti mostrerà un dialog per compilare solo quelle obbligatorie
+- Le chiavi opzionali possono essere configurate in seguito
+
+### ⚙️ **Test della Configurazione:**
+
+Dopo il setup, verifica che tutto funzioni:
+- **🎬 Test FFmpeg**: Clicca il pulsante per verificare FFmpeg
+- **🔄 Controlla aggiornamenti**: Testa la connessione a GitHub
+- **📦 Installa req.**: Verifica l'ambiente virtuale
+
+### 🔧 **Setup Manuale (Avanzato):**
+
+### 🔧 **Setup Manuale (Avanzato):**
+
+Se preferisci configurare tutto manualmente:
+
+1. **Clona Upload-Assistant:**
+   ```bash
+   git clone https://github.com/Audionut/Upload-Assistant.git
+   ```
+
+2. **Crea ambiente virtuale:**
+   ```bash
+   cd Upload-Assistant
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+
+3. **Installa dipendenze:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configura i file:**
+   - Copia `data/example-config.py` in `data/config.py`
+   - Modifica `config.py` con le tue API keys
+   - Avvia la GUI e seleziona le cartelle manualmente
 
 ## **Aggiornamenti:**
-  - Per aggiornare il BOT premi il pulsante verde "Controlla aggiornamenti BOT"
-  - Per aggiornare i moduli premi il pulsante verde "Controlla aggiornamenti dipendenze"
+
+### 🔄 **Aggiornamenti Automatici dalla GUI:**
+- **"🔄 Controlla aggiornamenti Upload-Assistant"** - Aggiorna il bot tramite git pull
+- **"📦 Installa req."** - Aggiorna le dipendenze Python
+- **"🎬 Test FFmpeg"** - Verifica lo stato di FFmpeg
+
+### 📥 **Aggiornamento della GUI:**
+Per aggiornare questa GUI:
+```bash
+cd SHRI-UA-GUI
+git pull origin main
+```
+
+## **Troubleshooting:**
+
+### ❌ **Problemi Comuni:**
+
+**"Git non trovato":**
+- Installa Git da [git-scm.com](https://git-scm.com/download/windows)
+- Riavvia l'applicazione dopo l'installazione
+
+**"Python non trovato":**
+- Installa Python 3.9+ da [python.org](https://www.python.org/downloads/)
+- Durante l'installazione, spunta "Add Python to PATH"
+
+**"FFmpeg non trovato":**
+- Apri PowerShell e esegui: `winget install ffmpeg`
+- Riavvia l'applicazione per verificare
+
+**"API Keys mancanti":**
+- L'applicazione ti guiderà nella configurazione
+- Solo TMDB e SHRI API sono obbligatorie
+
+**"Timeout durante il clone":**
+- Verifica la connessione internet
+- Prova a clonare manualmente: `git clone https://github.com/Audionut/Upload-Assistant.git`
+
+### 🆘 **Supporto:**
+- Controlla i [Issues](https://github.com/tiberio87/SHRI-UA-GUI/issues) per problemi noti
+- Crea un nuovo issue per segnalare bug
+- Il terminale integrato mostra log dettagliati per il debugging
 
 ## **Attribuzioni:**
 
