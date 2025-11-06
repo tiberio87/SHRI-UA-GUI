@@ -32,7 +32,7 @@ Prima di iniziare, assicurati di avere installato:
 
 1. **Git** - [Scarica da qui](https://git-scm.com/install/windows)
 2. **Python 3.9+** - [Scarica da qui](https://www.python.org/downloads/)
-3. **FFmpeg** (opzionale ma consigliato) - Installa con: `winget install ffmpeg`
+3. **FFmpeg** - Installa da un terminale PowerShell con: `winget install ffmpeg`
 
 ### 🚀 **Installazione Rapida:**
 
