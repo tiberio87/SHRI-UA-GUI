@@ -71,7 +71,7 @@ Prima di iniziare, assicurati di avere installato:
 
 **Dove ottenere le chiavi:**
 - **TMDB API**: [Registrati su TMDB](https://www.themoviedb.org/settings/api)
-- **SHRI API**: Fornita dal tracker ShareIsland
+- **SHRI API**: Fornita dal tracker
 - **ImgBB API** (opzionale): [Registrati su ImgBB](https://api.imgbb.com/)
 
 **Durante il setup automatico:**
