@@ -1260,6 +1260,98 @@ def show_dependency_error(missing_deps):
     
     messagebox.showerror("Dipendenze mancanti", error_message)
 
+def check_ffmpeg_availability():
+    """Controlla se FFmpeg è installato e disponibile nel PATH"""
+    try:
+        # Prova a eseguire ffmpeg -version
+        result = subprocess.run(
+            ["ffmpeg", "-version"], 
+            capture_output=True, 
+            text=True, 
+            timeout=10
+        )
+        
+        if result.returncode == 0:
+            # Estrai la versione da output
+            output_lines = result.stdout.split('\n')
+            version_line = output_lines[0] if output_lines else "Versione sconosciuta"
+            return True, version_line
+        else:
+            return False, "FFmpeg trovato ma non funzionante correttamente"
+            
+    except subprocess.TimeoutExpired:
+        return False, "Timeout durante il controllo di FFmpeg"
+    except FileNotFoundError:
+        return False, "FFmpeg non trovato nel PATH di sistema"
+    except Exception as e:
+        return False, f"Errore durante il controllo di FFmpeg: {str(e)}"
+
+def show_ffmpeg_installation_guide():
+    """Mostra una guida per l'installazione di FFmpeg usando Winget"""
+    guide_message = (
+        "🎬 FFMPEG NON TROVATO\n\n"
+        "FFmpeg è necessario per l'elaborazione dei video.\n\n"
+        "� INSTALLAZIONE CON WINGET (CONSIGLIATO):\n\n"
+        "1. Apri PowerShell o Prompt dei Comandi\n"
+        "2. Esegui il comando:\n\n"
+        "   winget install ffmpeg\n\n"
+        "3. Attendi il completamento dell'installazione\n"
+        "4. Riavvia l'applicazione per verificare\n\n"
+        "✅ Winget è incluso in Windows 10/11 e gestisce automaticamente:\n"
+        "• Download di FFmpeg\n"
+        "• Installazione nella posizione corretta\n"
+        "• Aggiunta al PATH di sistema\n\n"
+        "ℹ️ Se Winget non è disponibile, aggiornare Windows alla versione più recente."
+    )
+    
+    messagebox.showinfo("Installazione FFmpeg", guide_message)
+
+def check_and_handle_ffmpeg():
+    """Controlla FFmpeg e gestisce il caso in cui non sia presente"""
+    is_available, info = check_ffmpeg_availability()
+    
+    if is_available:
+        print(f"✅ FFmpeg trovato: {info}")
+        safe_update_status("✅ FFmpeg verificato", "green")
+        return True
+    else:
+        print(f"❌ FFmpeg non disponibile: {info}")
+        safe_update_status("⚠️ FFmpeg non trovato", "orange")
+        
+        # Mostra dialog per chiedere all'utente cosa fare
+        from tkinter import messagebox
+        response = messagebox.askyesnocancel(
+            "FFmpeg non trovato",
+            f"❌ {info}\n\n"
+            "FFmpeg è necessario per l'elaborazione dei video nell'Upload Assistant.\n\n"
+            "🔧 Vuoi vedere la guida di installazione?\n\n"
+            "• SÌ: Mostra guida installazione\n"
+            "• NO: Continua senza FFmpeg (limitazioni funzionali)\n"
+            "• ANNULLA: Chiudi l'applicazione"
+        )
+        
+        if response is True:
+            # Mostra guida installazione
+            show_ffmpeg_installation_guide()
+            return False
+        elif response is False:
+            # Continua senza FFmpeg
+            safe_update_status("⚠️ Funzionamento senza FFmpeg (limitato)", "orange")
+            messagebox.showwarning(
+                "Funzionamento limitato",
+                "⚠️ L'applicazione continuerà senza FFmpeg.\n\n"
+                "Alcune funzionalità potrebbero non essere disponibili:\n"
+                "• Elaborazione video avanzata\n"
+                "• Conversioni formato\n"
+                "• Analisi metadata video\n\n"
+                "Installa FFmpeg quando possibile per funzionalità complete."
+            )
+            return False
+        else:
+            # Annulla - chiudi applicazione
+            safe_update_status("❌ Applicazione chiusa dall'utente", "red")
+            return None
+
 def check_internet_connectivity():
     """Controlla se c'è connettività internet"""
     try:
@@ -1317,6 +1409,15 @@ def setup_from_local():
     missing_deps = check_system_dependencies()
     if missing_deps:
         show_dependency_error(missing_deps)
+        app.destroy()
+        exit()
+    
+    # === CONTROLLO FFMPEG ===
+    safe_update_status("🎬 Controllo disponibilità FFmpeg...", "yellow")
+    
+    ffmpeg_result = check_and_handle_ffmpeg()
+    if ffmpeg_result is None:
+        # Utente ha scelto di chiudere l'applicazione
         app.destroy()
         exit()
     
@@ -1618,6 +1719,29 @@ def run_pip_install():
 
     safe_update_status("✅ Comando pip install inviato", "green")
 
+def run_ffmpeg_check():
+    """Esegue un controllo manuale di FFmpeg e mostra informazioni dettagliate"""
+    safe_update_status("🎬 Controllo FFmpeg...", "yellow")
+    
+    is_available, info = check_ffmpeg_availability()
+    
+    if is_available:
+        safe_update_status("✅ FFmpeg verificato", "green")
+        messagebox.showinfo(
+            "FFmpeg Status",
+            f"✅ FFmpeg è installato e funzionante!\n\n{info}\n\n"
+            "🎬 L'Upload Assistant può utilizzare tutte le funzionalità video."
+        )
+    else:
+        safe_update_status("❌ FFmpeg non trovato", "red")
+        response = messagebox.askyesno(
+            "FFmpeg non trovato",
+            f"❌ {info}\n\n"
+            "Vuoi vedere la guida di installazione?"
+        )
+        if response:
+            show_ffmpeg_installation_guide()
+
 def run_upload():
     if not selected_path or not os.path.exists(selected_path):
         safe_update_status("❌ Percorso non valido", "red")
@@ -1732,6 +1856,10 @@ ToolTip(git_btn, "Esegui un git pull per aggiornare lo script all'ultima version
 pip_btn = ctk.CTkButton(app, text="Controlla aggiornamenti dipendenze", command=run_pip_install, fg_color="green", hover_color="darkgreen", text_color="white")
 pip_btn.pack(pady=5)
 ToolTip(pip_btn, "Esegui pip install per aggiornare le dipendenze del progetto.")
+
+ffmpeg_check_btn = ctk.CTkButton(app, text="🎬 Test FFmpeg", command=run_ffmpeg_check, fg_color="purple", hover_color="darkmagenta", text_color="white")
+ffmpeg_check_btn.pack(pady=5)
+ToolTip(ffmpeg_check_btn, "Verifica se FFmpeg è installato e funzionante sul sistema.")
 
 config_btn = ctk.CTkButton(app, text="Modifica Config.py", command=open_config_py, fg_color="blue", hover_color="darkblue", text_color="white")
 config_btn.pack(pady=5)
