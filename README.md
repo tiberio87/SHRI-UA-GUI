@@ -4,22 +4,65 @@ Interfaccia grafica per Audionut Upload-Assistant, Uno strumento semplice per se
 Questo progetto è una GUI basata sul lavoro originale di Audionut https://github.com/Audionut/Upload-Assistant
 Un ringraziamento speciale a lui per aver creato questo progetto.
 
-## Cosa può fare:
-  - Genera e analizza MediaInfo/BDInfo.
-  - Genera e carica screenshot. Tonemapping HDR se configurato.
-  - Usa srrdb per correggere i nomi scena usati nei siti.
-  - Può recuperare descrizioni da PTP/BLU/Aither/LST/OE/BHD (automaticamente su match del nome file o tramite argomento).
-  - Può estrarre e riutilizzare screenshot già presenti nelle descrizioni per saltare la generazione e l'upload.
-  - Ottiene identificatori TMDb/IMDb/MAL/TVDB/TVMAZE.
-  - Converte la numerazione assoluta in stagioni/episodi per Anime. Supporto Non-Anime con credenziali TVDB.
-  - Genera .torrent personalizzati senza cartelle/nfo inutili.
-  - Può riutilizzare torrent esistenti invece di crearne di nuovi.
-  - Può cercare automaticamente nei client qBitTorrent (versione 5+) torrent già esistenti.
-  - Genera il nome corretto per l'upload usando Mediainfo/BDInfo e TMDb/IMDb conforme alle regole del sito.
-  - Controlla se il rilascio è già presente sul sito.
-  - Aggiunge al client con resume veloce, seed immediato (rtorrent/qbittorrent/deluge/watch folder).
-  - TUTTO CON INPUT MINIMO!
-  - Attualmente funziona con .mkv/.mp4/Blu-ray/DVD/HD-DVDs.
+## Cosa può fare la GUI:
+
+### 🖥️ **Interfaccia Grafica Intuitiva:**
+  - **Interfaccia user-friendly** con layout responsive per tutti i tipi di schermo
+  - **Selezione file/cartelle** tramite dialog grafici (niente linea di comando!)
+  - **Campi compilabili** per IMDb ID, TMDb ID, TAG gruppo, piattaforma streaming, edizione
+  - **Combobox intelligenti** per tipo rilascio (Film MKV/Disco, Serie Episodio/Stagione)
+  - **Checkbox seed automatico** per configurare il seeding post-upload
+  - **Tooltip informativi** su ogni elemento per guidare l'utente
+
+### 🔧 **Setup e Configurazione Automatica:**
+  - **Setup completamente automatico** con un solo click
+  - **Controllo dipendenze** automatico (Git, Python, pip, FFmpeg)
+  - **Download automatico** di Upload-Assistant se non presente
+  - **Creazione ambiente virtuale** automatica
+  - **Installazione dipendenze** automatica con progress feedback
+  - **Configurazione API keys** tramite dialog guidato
+  - **Verifica FFmpeg** con guida di installazione Winget integrata
+
+### 💻 **Terminale Integrato:**
+  - **PowerShell integrato** direttamente nell'interfaccia
+  - **Esecuzione comandi** in tempo reale con output colorato
+  - **Controlli avanzati**: INVIO, Interrompi (Ctrl+C), Reset completo
+  - **Cronologia comandi** e auto-scroll intelligente
+  - **Gestione processi** con indicatori di stato visivi
+  - **Font ingranditi** e output ottimizzato per la lettura
+
+### 🚀 **Funzionalità Avanzate:**
+  - **Aggiornamenti automatici** di Upload-Assistant tramite git pull
+  - **Test integrati** per verificare FFmpeg e configurazioni
+  - **Gestione errori robusta** con timeout e fallback automatici
+  - **Salvataggio preferenze** per geometria finestra e modalità compatta
+  - **Supporto finestre multiple** con ridimensionamento dinamico
+  - **Modalità compatta** per schermi piccoli
+
+### 📦 **Gestione Upload Semplificata:**
+  - **Un click per l'upload** - tutti i parametri vengono passati automaticamente
+  - **Validazione input** con controlli pre-upload
+  - **Feedback visivo** durante tutte le operazioni
+  - **Gestione tracker** ottimizzata per ShareIsland (SHRI)
+  - **Configurazione rapida** di parametri avanzati senza editing manuale
+
+### 🔄 **Manutenzione e Aggiornamenti:**
+  - **Pulsanti dedicati** per aggiornare bot e dipendenze
+  - **Editor config.py integrato** (Notepad++ o Notepad)
+  - **Controllo stato sistema** con diagnostica integrata
+  - **Backup automatico** delle configurazioni
+  - **Log dettagliati** nel terminale per troubleshooting
+
+### ✨ **Tutto il Potere di Upload-Assistant, Zero Complessità:**
+Mantiene tutte le funzionalità avanzate del bot originale:
+  - Generazione e analisi MediaInfo/BDInfo
+  - Screenshot automatici con tonemapping HDR
+  - Correzione nomi scena via srrdb
+  - Recupero descrizioni da tracker esistenti
+  - Gestione identificatori TMDb/IMDb/MAL/TVDB/TVMAZE
+  - Creazione .torrent ottimizzati
+  - Integrazione qBitTorrent automatica
+  - **TUTTO CON INTERFACCIA GRAFICA - ZERO LINEA DI COMANDO!**
 
 ## Tracker supportati:
 
