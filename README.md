@@ -133,7 +133,7 @@ git pull origin main
 ### ❌ **Problemi Comuni:**
 
 **"Git non trovato":**
-- Installa Git da [git-scm.com](https://git-scm.com/download/windows)
+- Installa Git da [git-scm.com](https://git-scm.com/install/windows)
 - Riavvia l'applicazione dopo l'installazione
 
 **"Python non trovato":**
