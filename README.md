@@ -160,5 +160,5 @@ git pull origin main
 ## **Attribuzioni:**
 
 <p>
-  <a href="https://github.com/Audionut/Upload-Assistant"><img src="https://avatars.githubusercontent.com/u/13182387?s=48&v=4" alt="UA" height="40px;"></a>&nbsp;&nbsp;
+  <a href="https://github.com/Audionut/Upload-Assistant"><img src="https://avatars.githubusercontent.com/u/13182387?s=48&v=4" alt="UA" height="20px;"></a>&nbsp;&nbsp;
 </p>
