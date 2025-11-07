@@ -1761,6 +1761,11 @@ def run_upload():
     else:
         upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --no-seed --trackers {tracker} --cleanup'
 
+    # Controllo checkbox personal release
+    is_personal_release = personal_release_var.get()
+    if is_personal_release:
+        upload_cmd += " --personalrelease"
+
     if imdb_id:
         upload_cmd += f" --imdb {imdb_id}"
     if tmdb_id:
@@ -1844,6 +1849,12 @@ seed_var = tk.BooleanVar(value=False)
 seed_checkbox = ctk.CTkCheckBox(app, text="Fai seed del torrent dopo l'upload", variable=seed_var)
 seed_checkbox.pack(pady=20)
 ToolTip(seed_checkbox, "Se selezionato, il torrent verrà seedato dopo l'upload. Di default è NO.")
+
+# Checkbox per personal release
+personal_release_var = tk.BooleanVar(value=False)
+personal_release_checkbox = ctk.CTkCheckBox(app, text="Personal Release", variable=personal_release_var)
+personal_release_checkbox.pack(pady=10)
+ToolTip(personal_release_checkbox, "Se selezionato, il torrent sarà marcato come Personal Release. Di default è NO.")
 
 upload_btn = ctk.CTkButton(app, text="Upload", command=run_upload)
 upload_btn.pack(pady=10)
