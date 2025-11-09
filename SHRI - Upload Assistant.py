@@ -1787,8 +1787,8 @@ def run_upload():
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
         if os.path.exists(python_exe):
-            # Costruisce il comando usando array PowerShell per gestire correttamente gli spazi
-            args = [f'"{normalized_path}"', '--skip_auto_torrent']
+            # Costruisce la lista di argomenti
+            args = ['--skip_auto_torrent']
             if not do_seed:
                 args.append('--no-seed')
             args.extend(['--trackers', tracker])
@@ -1806,8 +1806,8 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Crea il comando con sintassi PowerShell robusta
-            full_cmd = f'& "{python_exe}" upload.py {" ".join(args)}'
+            # Usa singole quote per il percorso in PowerShell (gestisce meglio gli spazi)
+            full_cmd = f"& '{python_exe}' upload.py '{normalized_path}' {' '.join(args)}"
             terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
