@@ -136,8 +136,6 @@ Dopo il setup, verifica che tutto funzioni:
 
 ### 🔧 **Setup Manuale (Avanzato):**
 
-### 🔧 **Setup Manuale (Avanzato):**
-
 Se preferisci configurare tutto manualmente:
 
 1. **Clona Upload-Assistant:**
