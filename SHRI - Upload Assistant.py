@@ -1747,6 +1747,9 @@ def run_upload():
         safe_update_status("❌ Percorso non valido", "red")
         return
 
+    # Normalizza il percorso per Windows (converte / in \)
+    normalized_path = os.path.normpath(selected_path)
+    
     tracker = "SHRI"  # Tracker fisso impostato su SHRI
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
@@ -1757,9 +1760,9 @@ def run_upload():
     # Controllo checkbox seed
     do_seed = seed_var.get()
     if do_seed:
-        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --trackers {tracker}'
+        upload_cmd = f'python upload.py "{normalized_path}" --skip_auto_torrent --trackers {tracker}'
     else:
-        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --no-seed --trackers {tracker}'
+        upload_cmd = f'python upload.py "{normalized_path}" --skip_auto_torrent --no-seed --trackers {tracker}'
 
     # Controllo checkbox personal release
     is_personal_release = personal_release_var.get()
