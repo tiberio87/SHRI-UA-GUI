@@ -1782,13 +1782,33 @@ def run_upload():
 
     # Esegue l'upload nel terminale integrato
     terminal.execute_script_command(f'cd "{bot_path}"')
-    # Usa l'operatore & di PowerShell per eseguire l'eseguibile Python dell'ambiente virtuale
+    
+    # Costruisce il comando con argomenti separati per evitare problemi con spazi e caratteri speciali
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
         if os.path.exists(python_exe):
-            # Sostituisce 'python' con il percorso completo usando l'operatore &
-            upload_cmd_with_venv = upload_cmd.replace('python ', f'& "{python_exe}" ')
-            terminal.execute_script_command(upload_cmd_with_venv)
+            # Costruisce il comando usando array PowerShell per gestire correttamente gli spazi
+            args = [f'"{normalized_path}"', '--skip_auto_torrent']
+            if not do_seed:
+                args.append('--no-seed')
+            args.extend(['--trackers', tracker])
+            
+            if is_personal_release:
+                args.append('--personalrelease')
+            if imdb_id:
+                args.extend(['--imdb', imdb_id])
+            if tmdb_id:
+                args.extend(['--tmdb', tmdb_id])
+            if tag_value:
+                args.extend(['--tag', tag_value])
+            if service_value:
+                args.extend(['--service', service_value])
+            if edition_value:
+                args.extend(['--edition', edition_value])
+            
+            # Crea il comando con sintassi PowerShell robusta
+            full_cmd = f'& "{python_exe}" upload.py {" ".join(args)}'
+            terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
     else:
