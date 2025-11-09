@@ -1757,9 +1757,9 @@ def run_upload():
     # Controllo checkbox seed
     do_seed = seed_var.get()
     if do_seed:
-        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --trackers {tracker} --cleanup'
+        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --trackers {tracker}'
     else:
-        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --no-seed --trackers {tracker} --cleanup'
+        upload_cmd = f'python upload.py "{selected_path}" --skip_auto_torrent --no-seed --trackers {tracker}'
 
     # Controllo checkbox personal release
     is_personal_release = personal_release_var.get()
