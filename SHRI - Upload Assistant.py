@@ -1781,8 +1781,6 @@ def run_upload():
         upload_cmd += f" --edition {edition_value}"
 
     # Esegue l'upload nel terminale integrato
-    terminal.execute_script_command(f'cd "{bot_path}"')
-    
     # Costruisce il comando con argomenti separati per evitare problemi con spazi e caratteri speciali
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
@@ -1806,12 +1804,15 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Usa singole quote per il percorso in PowerShell (gestisce meglio gli spazi)
-            full_cmd = f"& '{python_exe}' upload.py '{normalized_path}' {' '.join(args)}"
+            # Combina cd e comando Python in un unico comando usando ; per evitare race conditions
+            args_str = ' '.join(args)
+            full_cmd = f'cd "{bot_path}"; & "{python_exe}" upload.py "{normalized_path}" {args_str}'
             terminal.execute_script_command(full_cmd)
         else:
+            terminal.execute_script_command(f'cd "{bot_path}"')
             terminal.execute_script_command(upload_cmd)
     else:
+        terminal.execute_script_command(f'cd "{bot_path}"')
         terminal.execute_script_command(upload_cmd)
 
     safe_update_status("✅ Upload avviato nel terminale...", "green")
