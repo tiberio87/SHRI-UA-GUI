@@ -1781,6 +1781,13 @@ def run_upload():
         upload_cmd += f" --edition {edition_value}"
 
     # Esegue l'upload nel terminale integrato
+    # Prima cambia directory
+    terminal.execute_script_command(f'cd "{bot_path}"')
+    
+    # Aspetta un attimo che il cd venga processato
+    import time
+    time.sleep(0.5)
+    
     # Costruisce il comando con argomenti separati per evitare problemi con spazi e caratteri speciali
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
@@ -1804,15 +1811,13 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Combina cd e comando Python in un unico comando usando ; per evitare race conditions
+            # Esegue il comando Python dopo il cd
             args_str = ' '.join(args)
-            full_cmd = f'cd "{bot_path}"; & "{python_exe}" upload.py "{normalized_path}" {args_str}'
+            full_cmd = f'& "{python_exe}" upload.py "{normalized_path}" {args_str}'
             terminal.execute_script_command(full_cmd)
         else:
-            terminal.execute_script_command(f'cd "{bot_path}"')
             terminal.execute_script_command(upload_cmd)
     else:
-        terminal.execute_script_command(f'cd "{bot_path}"')
         terminal.execute_script_command(upload_cmd)
 
     safe_update_status("✅ Upload avviato nel terminale...", "green")
