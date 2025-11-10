@@ -1783,14 +1783,10 @@ def run_upload():
         upload_cmd += f" --edition {edition_value}"
 
     # Esegue l'upload nel terminale integrato
-    # Prima cambia directory
-    terminal.execute_script_command(f'cd "{bot_path}"')
-    
-    # Aspetta un attimo che il cd venga processato
+    # SOLUZIONE: Usa un file temporaneo .ps1 per evitare problemi di encoding via stdin
+    import tempfile
     import time
-    time.sleep(0.5)
     
-    # Costruisce il comando con argomenti separati per evitare problemi con spazi e caratteri speciali
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
         if os.path.exists(python_exe):
@@ -1813,22 +1809,48 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Usa singole virgolette per il percorso come in PowerShell manuale
-            # Le singole virgolette in PowerShell preservano tutti i caratteri letteralmente
-            # inclusi caratteri accentati (è, à, ò, etc.)
             args_str = ' '.join(args)
             
             # Escape delle singole virgolette nel percorso (se presenti)
-            # In PowerShell dentro singole virgolette, ' diventa ''
             escaped_path = normalized_path.replace("'", "''")
             
-            # Costruisce il comando usando singole virgolette per il path
-            # Questo preserva perfettamente i caratteri UTF-8
-            full_cmd = f'& "{python_exe}" upload.py \'{escaped_path}\' {args_str}'
-            terminal.execute_script_command(full_cmd)
+            # Crea un file PowerShell temporaneo con encoding UTF-8
+            temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8')
+            try:
+                # Scrive il comando nel file .ps1 con encoding UTF-8
+                ps1_script = f"""# SHRI Upload Script
+Set-Location "{bot_path}"
+& "{python_exe}" upload.py '{escaped_path}' {args_str}
+"""
+                temp_ps1.write(ps1_script)
+                temp_ps1.close()
+                
+                # Esegue il file .ps1 nel terminale
+                terminal.execute_script_command(f'& "{temp_ps1.name}"')
+                
+                # Pulisce il file temporaneo dopo qualche secondo
+                def cleanup():
+                    time.sleep(2)
+                    try:
+                        os.unlink(temp_ps1.name)
+                    except:
+                        pass
+                threading.Thread(target=cleanup, daemon=True).start()
+                
+            except Exception as e:
+                safe_update_status(f"❌ Errore creazione script: {e}", "red")
+                try:
+                    os.unlink(temp_ps1.name)
+                except:
+                    pass
+                return
         else:
+            terminal.execute_script_command(f'cd "{bot_path}"')
+            time.sleep(0.5)
             terminal.execute_script_command(upload_cmd)
     else:
+        terminal.execute_script_command(f'cd "{bot_path}"')
+        time.sleep(0.5)
         terminal.execute_script_command(upload_cmd)
 
     safe_update_status("✅ Upload avviato nel terminale...", "green")
