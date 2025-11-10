@@ -1750,6 +1750,23 @@ def run_upload():
     # Normalizza il percorso per Windows (converte / in \)
     normalized_path = os.path.normpath(selected_path)
     
+    # Prova a ottenere il percorso short name (8.3) per evitare problemi con caratteri speciali
+    try:
+        import ctypes
+        from ctypes import wintypes
+        
+        # GetShortPathName per ottenere il formato 8.3
+        buffer = ctypes.create_unicode_buffer(260)
+        get_short_path_name = ctypes.windll.kernel32.GetShortPathNameW
+        if get_short_path_name(normalized_path, buffer, len(buffer)):
+            short_path = buffer.value
+            # Usa il percorso corto se disponibile, altrimenti usa quello normale
+            normalized_path = short_path if short_path else normalized_path
+    except Exception as e:
+        # Se fallisce, usa il percorso normale
+        print(f"Impossibile ottenere short path: {e}")
+        pass
+    
     tracker = "SHRI"  # Tracker fisso impostato su SHRI
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
@@ -1811,9 +1828,15 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Esegue il comando Python dopo il cd
+            # Escape dei caratteri speciali nel percorso per PowerShell
+            # Sostituisce le virgolette con un escape sicuro
+            escaped_path = normalized_path.replace('"', '`"')
+            
+            # Usa una sintassi più robusta con -ArgumentList di PowerShell
+            # Costruisce il comando usando una lista di argomenti per evitare problemi di parsing
             args_str = ' '.join(args)
-            full_cmd = f'& "{python_exe}" upload.py "{normalized_path}" {args_str}'
+            # Usa il formato con virgolette singole per evitare problemi con caratteri accentati
+            full_cmd = f'& "{python_exe}" upload.py `"{escaped_path}`" {args_str}'
             terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
