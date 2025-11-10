@@ -1813,18 +1813,18 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Soluzione: usa una variabile PowerShell per il percorso
-            # Questo evita completamente problemi di encoding e parsing
+            # Usa singole virgolette per il percorso come in PowerShell manuale
+            # Le singole virgolette in PowerShell preservano tutti i caratteri letteralmente
+            # inclusi caratteri accentati (è, à, ò, etc.)
             args_str = ' '.join(args)
             
-            # Prima imposta una variabile PowerShell con il percorso
-            # Le variabili PowerShell gestiscono correttamente l'encoding UTF-8
-            terminal.execute_script_command(f'$filepath = "{normalized_path}"')
-            time.sleep(0.1)  # Piccolo delay per assicurare che la variabile sia impostata
+            # Escape delle singole virgolette nel percorso (se presenti)
+            # In PowerShell dentro singole virgolette, ' diventa ''
+            escaped_path = normalized_path.replace("'", "''")
             
-            # Poi usa la variabile nel comando
-            # Questo evita qualsiasi problema di parsing con caratteri speciali
-            full_cmd = f'& "{python_exe}" upload.py $filepath {args_str}'
+            # Costruisce il comando usando singole virgolette per il path
+            # Questo preserva perfettamente i caratteri UTF-8
+            full_cmd = f'& "{python_exe}" upload.py \'{escaped_path}\' {args_str}'
             terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
