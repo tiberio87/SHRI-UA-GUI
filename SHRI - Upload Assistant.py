@@ -511,9 +511,11 @@ class IntegratedTerminal:
             time.sleep(0.2)  # Attendi che PowerShell si avvii
             if self.process and self.process.stdin:
                 try:
-                    # Configura PowerShell per output pulito
+                    # Configura PowerShell per output pulito e input/output UTF-8
                     init_commands = [
                         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+                        "[Console]::InputEncoding = [System.Text.Encoding]::UTF8",
+                        "$OutputEncoding = [System.Text.Encoding]::UTF8",
                         "$Host.UI.RawUI.WindowTitle = 'SHRI Terminal'",
                         "Clear-Host"
                     ]
@@ -1750,23 +1752,6 @@ def run_upload():
     # Normalizza il percorso per Windows (converte / in \)
     normalized_path = os.path.normpath(selected_path)
     
-    # Prova a ottenere il percorso short name (8.3) per evitare problemi con caratteri speciali
-    try:
-        import ctypes
-        from ctypes import wintypes
-        
-        # GetShortPathName per ottenere il formato 8.3
-        buffer = ctypes.create_unicode_buffer(260)
-        get_short_path_name = ctypes.windll.kernel32.GetShortPathNameW
-        if get_short_path_name(normalized_path, buffer, len(buffer)):
-            short_path = buffer.value
-            # Usa il percorso corto se disponibile, altrimenti usa quello normale
-            normalized_path = short_path if short_path else normalized_path
-    except Exception as e:
-        # Se fallisce, usa il percorso normale
-        print(f"Impossibile ottenere short path: {e}")
-        pass
-    
     tracker = "SHRI"  # Tracker fisso impostato su SHRI
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
@@ -1828,15 +1813,17 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Escape dei caratteri speciali nel percorso per PowerShell
-            # Sostituisce le virgolette con un escape sicuro
-            escaped_path = normalized_path.replace('"', '`"')
-            
-            # Usa una sintassi più robusta con -ArgumentList di PowerShell
-            # Costruisce il comando usando una lista di argomenti per evitare problemi di parsing
+            # Costruisce il comando usando l'array di PowerShell per passare gli argomenti
+            # Questo evita problemi di parsing con caratteri speciali
             args_str = ' '.join(args)
-            # Usa il formato con virgolette singole per evitare problemi con caratteri accentati
-            full_cmd = f'& "{python_exe}" upload.py `"{escaped_path}`" {args_str}'
+            
+            # In PowerShell, le singole virgolette ' gestiscono letteralmente tutti i caratteri
+            # inclusi caratteri accentati e apostrofi, quindi usiamole per il percorso
+            # Dobbiamo solo escapare eventuali singole virgolette nel percorso stesso
+            escaped_path = normalized_path.replace("'", "''")
+            
+            # Usa singole virgolette per il percorso (literal string in PowerShell)
+            full_cmd = f"""& "{python_exe}" upload.py '{escaped_path}' {args_str}"""
             terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
