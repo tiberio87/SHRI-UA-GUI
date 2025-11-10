@@ -1813,17 +1813,18 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Costruisce il comando usando l'array di PowerShell per passare gli argomenti
-            # Questo evita problemi di parsing con caratteri speciali
+            # Soluzione: usa una variabile PowerShell per il percorso
+            # Questo evita completamente problemi di encoding e parsing
             args_str = ' '.join(args)
             
-            # In PowerShell, le singole virgolette ' gestiscono letteralmente tutti i caratteri
-            # inclusi caratteri accentati e apostrofi, quindi usiamole per il percorso
-            # Dobbiamo solo escapare eventuali singole virgolette nel percorso stesso
-            escaped_path = normalized_path.replace("'", "''")
+            # Prima imposta una variabile PowerShell con il percorso
+            # Le variabili PowerShell gestiscono correttamente l'encoding UTF-8
+            terminal.execute_script_command(f'$filepath = "{normalized_path}"')
+            time.sleep(0.1)  # Piccolo delay per assicurare che la variabile sia impostata
             
-            # Usa singole virgolette per il percorso (literal string in PowerShell)
-            full_cmd = f"""& "{python_exe}" upload.py '{escaped_path}' {args_str}"""
+            # Poi usa la variabile nel comando
+            # Questo evita qualsiasi problema di parsing con caratteri speciali
+            full_cmd = f'& "{python_exe}" upload.py $filepath {args_str}'
             terminal.execute_script_command(full_cmd)
         else:
             terminal.execute_script_command(upload_cmd)
