@@ -1809,24 +1809,19 @@ def run_upload():
             if edition_value:
                 args.extend(['--edition', edition_value])
             
-            # Crea un file PowerShell temporaneo con encoding UTF-8
-            temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8')
+            args_str = ' '.join(args)
+            
+            # Escape delle doppie virgolette nel percorso
+            escaped_path = normalized_path.replace('"', '`"')
+            
+            # Crea un file PowerShell temporaneo con encoding UTF-8 con BOM
+            temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
             try:
-                # Usa array di argomenti PowerShell - il modo più sicuro per passare path con caratteri speciali
-                # PowerShell tratta ogni elemento dell'array come argomento separato, preservando i caratteri
-                ps1_script = f"""# SHRI Upload Script - UTF-8
+                # Scrive il comando nel file .ps1 con encoding UTF-8-BOM
+                # Il BOM forza PowerShell a riconoscere il file come UTF-8
+                ps1_script = f"""# SHRI Upload Script
 Set-Location "{bot_path}"
-$pythonExe = "{python_exe}"
-$filePath = @'{normalized_path}'@
-$arguments = @('upload.py', $filePath"""
-                
-                # Aggiungi ogni argomento all'array
-                for arg in args:
-                    ps1_script += f", '{arg}'"
-                
-                ps1_script += """
-)
-& $pythonExe $arguments
+& "{python_exe}" upload.py "{escaped_path}" {args_str}
 """
                 temp_ps1.write(ps1_script)
                 temp_ps1.close()
