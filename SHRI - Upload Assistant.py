@@ -1702,28 +1702,65 @@ def open_config_py():
 def run_git_pull():
     safe_update_status("🔄 Controllo aggiornamenti Bot...", "yellow")
 
-    # Cambia directory e esegue git pull nel terminale integrato
-    terminal.execute_script_command(f'cd "{bot_path}"')
-    terminal.execute_script_command('git pull')
-
-    safe_update_status("✅ Comando git pull inviato", "green")
+    # Apre un terminale esterno per git pull
+    import tempfile
+    temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
+    try:
+        ps1_script = f"""# Git Pull Script
+Set-Location "{bot_path}"
+Write-Host "Controllo aggiornamenti Upload-Assistant..." -ForegroundColor Cyan
+git pull
+Write-Host ""
+Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+"""
+        temp_ps1.write(ps1_script)
+        temp_ps1.close()
+        
+        subprocess.Popen([
+            "powershell.exe",
+            "-ExecutionPolicy", "Bypass",
+            "-File", temp_ps1.name
+        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        
+        safe_update_status("✅ Terminale git pull aperto", "green")
+    except Exception as e:
+        safe_update_status(f"❌ Errore: {e}", "red")
 
 def run_pip_install():
     safe_update_status("🔄 Controllo aggiornamenti pip...", "yellow")
 
-    # Attiva l'ambiente virtuale e installa i requirements nel terminale integrato
-    terminal.execute_script_command(f'cd "{bot_path}"')
-    # Usa l'operatore & di PowerShell per eseguire comandi con percorsi che contengono spazi
-    if venv_path:
-        pip_exe = os.path.join(venv_path, "Scripts", "pip.exe")
-        if os.path.exists(pip_exe):
-            terminal.execute_script_command(f'& "{pip_exe}" install -r requirements.txt')
+    # Apre un terminale esterno per pip install
+    import tempfile
+    temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
+    try:
+        if venv_path:
+            pip_exe = os.path.join(venv_path, "Scripts", "pip.exe")
+            if not os.path.exists(pip_exe):
+                pip_exe = "pip"
         else:
-            terminal.execute_script_command('pip install -r requirements.txt')
-    else:
-        terminal.execute_script_command('pip install -r requirements.txt')
-
-    safe_update_status("✅ Comando pip install inviato", "green")
+            pip_exe = "pip"
+            
+        ps1_script = f"""# Pip Install Script
+Set-Location "{bot_path}"
+Write-Host "Aggiornamento dipendenze..." -ForegroundColor Cyan
+& "{pip_exe}" install -r requirements.txt
+Write-Host ""
+Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+"""
+        temp_ps1.write(ps1_script)
+        temp_ps1.close()
+        
+        subprocess.Popen([
+            "powershell.exe",
+            "-ExecutionPolicy", "Bypass",
+            "-File", temp_ps1.name
+        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        
+        safe_update_status("✅ Terminale pip install aperto", "green")
+    except Exception as e:
+        safe_update_status(f"❌ Errore: {e}", "red")
 
 def run_ffmpeg_check():
     """Esegue un controllo manuale di FFmpeg e mostra informazioni dettagliate"""
