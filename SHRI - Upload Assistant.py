@@ -1823,9 +1823,12 @@ def run_upload():
             try:
                 # Scrive il comando nel file .ps1 con encoding UTF-8-BOM
                 # Il BOM forza PowerShell a riconoscere il file come UTF-8
+                # -u flag: unbuffered output per mostrare tutto in tempo reale
+                # PYTHONUNBUFFERED: forza Python a non bufferizzare stdout/stderr
                 ps1_script = f"""# SHRI Upload Script
+$env:PYTHONUNBUFFERED=1
 Set-Location "{bot_path}"
-& "{python_exe}" upload.py "{escaped_path}" {args_str}
+& "{python_exe}" -u upload.py "{escaped_path}" {args_str}
 """
                 temp_ps1.write(ps1_script)
                 temp_ps1.close()
