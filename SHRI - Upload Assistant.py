@@ -557,8 +557,7 @@ class IntegratedTerminal:
                     # Leggi carattere per carattere
                     char = self.process.stdout.read(1)
                     if char:
-                        # Filtra caratteri di controllo più aggressivamente
-                        # Permetti solo: caratteri stampabili (32-126), newline (10), tab (9), carriage return (13)
+                        # Permetti tutti i caratteri stampabili e di controllo comuni
                         char_code = ord(char)
                         if char_code >= 32 or char_code in [9, 10, 13]:
                             buffer += char
@@ -567,7 +566,7 @@ class IntegratedTerminal:
                         # Se troviamo un newline, invia sempre il buffer
                         if char == '\n':
                             if buffer:
-                                # Pulisce caratteri di controllo residui e normalizza spazi
+                                # Pulisce solo caratteri di controllo pericolosi
                                 clean_buffer = ''.join(c for c in buffer if ord(c) >= 32 or c in ['\n', '\t', '\r'])
                                 # Rimuove sequenze ANSI escape se presenti
                                 import re
@@ -604,19 +603,24 @@ class IntegratedTerminal:
                         # Nessun carattere disponibile
                         current_time = time.time()
 
-                        # Se è passato più di 0.5 secondi senza output e c'è testo nel buffer
-                        if (current_time - last_output_time) > 0.5 and buffer.strip():
+                        # RIDOTTO TIMEOUT: Invia buffer ogni 0.1 secondi invece di 0.5
+                        # Questo mostra l'output del bot più velocemente
+                        if (current_time - last_output_time) > 0.1 and buffer.strip():
                             clean_buffer = ''.join(c for c in buffer if ord(c) >= 32 or c in ['\n', '\t', '\r'])
+                            import re
+                            clean_buffer = re.sub(r'\x1b\[[0-9;]*m', '', clean_buffer)
                             self.output_queue.put(("output", clean_buffer))
                             buffer = ""
 
                         # Piccola pausa per non sovraccaricare la CPU
-                        time.sleep(0.05)
+                        time.sleep(0.01)  # RIDOTTO da 0.05 a 0.01 per lettura più reattiva
 
                 except Exception:
                     # In caso di errore, invia quello che c'è nel buffer
                     if buffer.strip():
                         clean_buffer = ''.join(c for c in buffer if ord(c) >= 32 or c in ['\n', '\t', '\r'])
+                        import re
+                        clean_buffer = re.sub(r'\x1b\[[0-9;]*m', '', clean_buffer)
                         self.output_queue.put(("output", clean_buffer))
                         buffer = ""
                     time.sleep(0.1)
