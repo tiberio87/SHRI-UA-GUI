@@ -1829,12 +1829,17 @@ def run_upload():
 $env:PYTHONUNBUFFERED=1
 Set-Location "{bot_path}"
 & "{python_exe}" -u upload.py "{escaped_path}" {args_str}
+Write-Host ""
+Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 """
                 temp_ps1.write(ps1_script)
                 temp_ps1.close()
                 
-                # Esegue il file .ps1 nel terminale
-                terminal.execute_script_command(f'& "{temp_ps1.name}"')
+                # Apre un terminale PowerShell ESTERNO invece di usare quello integrato
+                # -NoExit: mantiene la finestra aperta dopo l'esecuzione
+                # -ExecutionPolicy Bypass: permette l'esecuzione dello script
+                terminal.execute_script_command(f'Start-Process powershell.exe -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", \\"{temp_ps1.name}\\"')
                 
                 # Pulisce il file temporaneo dopo qualche secondo
                 def cleanup():
