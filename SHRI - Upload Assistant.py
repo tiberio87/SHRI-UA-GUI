@@ -1836,14 +1836,17 @@ $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
                 temp_ps1.write(ps1_script)
                 temp_ps1.close()
                 
-                # Apre un terminale PowerShell ESTERNO invece di usare quello integrato
-                # -NoExit: mantiene la finestra aperta dopo l'esecuzione
-                # -ExecutionPolicy Bypass: permette l'esecuzione dello script
-                terminal.execute_script_command(f'Start-Process powershell.exe -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", \\"{temp_ps1.name}\\"')
+                # Apre un terminale PowerShell ESTERNO usando subprocess direttamente
+                # Questo è più affidabile che passare tramite il terminale integrato
+                subprocess.Popen([
+                    "powershell.exe",
+                    "-ExecutionPolicy", "Bypass",
+                    "-File", temp_ps1.name
+                ], creationflags=subprocess.CREATE_NEW_CONSOLE)
                 
-                # Pulisce il file temporaneo dopo qualche secondo
+                # Pulisce il file temporaneo dopo molto tempo (lo script deve rimanere mentre il terminale è aperto)
                 def cleanup():
-                    time.sleep(2)
+                    time.sleep(60)  # Aspetta 1 minuto prima di cancellare
                     try:
                         os.unlink(temp_ps1.name)
                     except:
