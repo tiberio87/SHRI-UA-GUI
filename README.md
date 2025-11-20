@@ -85,8 +85,8 @@ Prima di iniziare, assicurati di avere installato:
 
 2. **Installa la dipendenza GUI:**
    - Apri PowerShell o Prompt dei Comandi
-   - Esegui: `pip install customtkinter`
-   - Questa è l'unica dipendenza necessaria per avviare la GUI
+   - Esegui: `pip install customtkinter pywinpty`
+   - Queste sono le uniche dipendenze necessarie per avviare la GUI
 
 3. **Prepara il file API Keys:**
    - Crea un file `api_keys.json` nella stessa cartella dell'applicazione
