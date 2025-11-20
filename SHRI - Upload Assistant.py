@@ -1663,7 +1663,11 @@ bot_path, venv_path = get_valid_paths()
 activate_path = resolve_activate_path(venv_path)
 assert activate_path is not None, "Percorso di attivazione non trovato"
 
-# Inizializza il terminale integrato
+# Variabile globale per il processo del terminale persistente
+persistent_terminal_process = None
+persistent_terminal_script = None
+
+# Inizializza il terminale integrato (solo per log)
 terminal = IntegratedTerminal(app)
 
 # === FUNZIONI APPLICAZIONE ===
@@ -1683,6 +1687,54 @@ def select_path():
     else:
         selected_path = ""
         path_label.configure(text="Nessuna selezione")
+
+def open_persistent_terminal():
+    """Apre un terminale PowerShell persistente che rimane aperto per tutta la sessione"""
+    global persistent_terminal_process, persistent_terminal_script
+    
+    import tempfile
+    
+    # Crea uno script PowerShell persistente
+    persistent_terminal_script = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
+    
+    ps1_script = f"""# SHRI Upload Assistant - Terminale Persistente
+$Host.UI.RawUI.WindowTitle = "SHRI Upload Assistant Terminal"
+$Host.UI.RawUI.BackgroundColor = "Black"
+$Host.UI.RawUI.ForegroundColor = "Green"
+Clear-Host
+
+Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║     SHRI Upload Assistant - Terminale Persistente        ║" -ForegroundColor Cyan
+Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "📁 Directory Bot: {bot_path}" -ForegroundColor Yellow
+Write-Host "🐍 Python venv: {venv_path if venv_path else 'Non trovato'}" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "✅ Terminale pronto! I comandi di upload appariranno qui." -ForegroundColor Green
+Write-Host "   Lascia questa finestra aperta durante l'utilizzo della GUI." -ForegroundColor Gray
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+Write-Host ""
+
+# Cambia nella directory del bot
+Set-Location "{bot_path}"
+
+# Resta in attesa (il terminale rimane aperto)
+# Gli script temporanei verranno eseguiti in questa sessione
+"""
+    
+    persistent_terminal_script.write(ps1_script)
+    persistent_terminal_script.close()
+    
+    # Apre il terminale PowerShell persistente
+    persistent_terminal_process = subprocess.Popen([
+        "powershell.exe",
+        "-NoExit",
+        "-ExecutionPolicy", "Bypass",
+        "-File", persistent_terminal_script.name
+    ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+    
+    return persistent_terminal_process
 
 def open_config_py():
     config_path = os.path.join(bot_path, "data", "config.py")
@@ -1994,8 +2046,8 @@ ToolTip(config_btn, "Apri il file config.py per modificare la configurazione del
 status_label = ctk.CTkLabel(app, text="", text_color="green")
 status_label.pack(pady=10)
 
-# Aggiungi il terminale alla GUI
-terminal.pack(fill="both", expand=True, padx=10, pady=10)
+# NON aggiungere il terminale integrato alla GUI - usiamo solo terminale esterno
+# Il terminale integrato rimane in memoria solo per eventuali log interni
 
 # === MODALITÀ VISUALIZZAZIONE ===
 def toggle_compact_mode():
@@ -2120,6 +2172,9 @@ app.after(1000, periodic_update)
 
 # Auto-rileva il layout migliore
 app.after(2000, auto_detect_best_layout)
+
+# Apre il terminale PowerShell persistente all'avvio
+app.after(500, open_persistent_terminal)
 
 ctk.CTkLabel(app, text="Authors: Tiberio87").pack(pady=5)
 
