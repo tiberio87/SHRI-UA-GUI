@@ -375,6 +375,363 @@ class ToolTip:
             self.tip_window = None
 
 # === Terminale Integrato ===
+class ConPTYTerminal:
+    """Terminale integrato usando Windows ConPTY con parser ANSI per colori e formattazione"""
+    def __init__(self, parent):
+        self.parent = parent
+        self.pty = None
+        self.output_queue = queue.Queue()
+        self.running = True
+        self.ansi_buffer = ""
+
+        # Frame per il terminale
+        self.terminal_frame = ctk.CTkFrame(parent)
+
+        # Area di output del terminale
+        terminal_height = max(12, min(20, int(self.parent.winfo_screenheight() / 60)))
+        terminal_width = max(60, min(100, int(self.parent.winfo_screenwidth() / 20)))
+        
+        self.terminal_output = scrolledtext.ScrolledText(
+            self.terminal_frame,
+            height=terminal_height,
+            width=terminal_width,
+            bg="#0c0c0c",  # Colore Windows Terminal
+            fg="#cccccc",
+            font=("Consolas", 11),
+            wrap=tk.WORD,
+            state=tk.DISABLED,
+            insertbackground="#cccccc",
+            padx=5,
+            pady=5
+        )
+        self.terminal_output.pack(padx=10, pady=(10, 5), fill="both", expand=True)
+        
+        # Configurazione tag per colori ANSI
+        self.setup_ansi_tags()
+        
+        # Stato corrente del testo (per gestire i codici ANSI)
+        self.current_fg = "#cccccc"
+        self.current_bg = "#0c0c0c"
+        self.current_bold = False
+        self.current_underline = False
+
+        # Frame per input
+        self.input_frame = ctk.CTkFrame(self.terminal_frame)
+        self.input_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Entry per input
+        self.command_entry = ctk.CTkEntry(
+            self.input_frame,
+            placeholder_text="Scrivi un comando...",
+            font=("Consolas", 12)
+        )
+        self.command_entry.pack(side="left", fill="x", expand=True, padx=(5, 5))
+        self.command_entry.bind("<Return>", lambda e: self.send_input())
+        self.command_entry.bind("<Up>", self.history_up)
+        self.command_entry.bind("<Down>", self.history_down)
+
+        # Pulsante INVIO
+        self.send_btn = ctk.CTkButton(
+            self.input_frame,
+            text="INVIO",
+            command=self.send_input,
+            width=80,
+            fg_color="green",
+            hover_color="darkgreen"
+        )
+        self.send_btn.pack(side="left", padx=(0, 5))
+
+        # Pulsante CTRL+C
+        self.interrupt_btn = ctk.CTkButton(
+            self.input_frame,
+            text="CTRL+C",
+            command=self.send_interrupt,
+            width=80,
+            fg_color="red",
+            hover_color="darkred"
+        )
+        self.interrupt_btn.pack(side="left", padx=(0, 5))
+
+        # Pulsante Pulisci
+        self.clear_btn = ctk.CTkButton(
+            self.input_frame,
+            text="Pulisci",
+            command=self.clear_terminal,
+            width=80,
+            fg_color="gray",
+            hover_color="darkgray"
+        )
+        self.clear_btn.pack(side="left")
+
+        # Storia comandi
+        self.command_history = []
+        self.history_index = -1
+
+        # Avvia il terminale ConPTY
+        self.start_conpty()
+
+    def setup_ansi_tags(self):
+        """Configura i tag per i colori ANSI standard"""
+        # Colori ANSI standard (0-15)
+        ansi_colors = {
+            # Colori normali (30-37, 40-47)
+            'black': '#0c0c0c',
+            'red': '#c50f1f',
+            'green': '#13a10e',
+            'yellow': '#c19c00',
+            'blue': '#0037da',
+            'magenta': '#881798',
+            'cyan': '#3a96dd',
+            'white': '#cccccc',
+            # Colori bright (90-97, 100-107)
+            'bright_black': '#767676',
+            'bright_red': '#e74856',
+            'bright_green': '#16c60c',
+            'bright_yellow': '#f9f1a5',
+            'bright_blue': '#3b78ff',
+            'bright_magenta': '#b4009e',
+            'bright_cyan': '#61d6d6',
+            'bright_white': '#f2f2f2',
+        }
+        
+        # Configura tag per foreground
+        for name, color in ansi_colors.items():
+            self.terminal_output.tag_config(f"fg_{name}", foreground=color)
+        
+        # Configura tag per background
+        for name, color in ansi_colors.items():
+            self.terminal_output.tag_config(f"bg_{name}", background=color)
+        
+        # Tag per formattazione
+        self.terminal_output.tag_config("bold", font=("Consolas", 11, "bold"))
+        self.terminal_output.tag_config("underline", underline=True)
+        self.terminal_output.tag_config("italic", font=("Consolas", 11, "italic"))
+
+    def parse_ansi_codes(self, text):
+        """Parser ANSI che interpreta i codici e restituisce segmenti con tag"""
+        import re
+        
+        segments = []
+        current_tags = []
+        
+        # Pattern per codici ANSI: ESC[...m
+        ansi_pattern = re.compile(r'\x1b\[([0-9;]+)m')
+        
+        pos = 0
+        for match in ansi_pattern.finditer(text):
+            # Testo prima del codice ANSI
+            if match.start() > pos:
+                text_segment = text[pos:match.start()]
+                if text_segment:
+                    segments.append((text_segment, current_tags.copy()))
+            
+            # Interpreta il codice ANSI
+            codes = match.group(1).split(';')
+            new_tags = self.interpret_ansi_codes(codes)
+            current_tags = new_tags
+            
+            pos = match.end()
+        
+        # Testo rimanente dopo l'ultimo codice
+        if pos < len(text):
+            text_segment = text[pos:]
+            if text_segment:
+                segments.append((text_segment, current_tags.copy()))
+        
+        return segments
+
+    def interpret_ansi_codes(self, codes):
+        """Interpreta i codici ANSI e restituisce i tag corrispondenti"""
+        tags = []
+        
+        color_map = {
+            '30': 'fg_black', '31': 'fg_red', '32': 'fg_green', '33': 'fg_yellow',
+            '34': 'fg_blue', '35': 'fg_magenta', '36': 'fg_cyan', '37': 'fg_white',
+            '90': 'fg_bright_black', '91': 'fg_bright_red', '92': 'fg_bright_green',
+            '93': 'fg_bright_yellow', '94': 'fg_bright_blue', '95': 'fg_bright_magenta',
+            '96': 'fg_bright_cyan', '97': 'fg_bright_white',
+            '40': 'bg_black', '41': 'bg_red', '42': 'bg_green', '43': 'bg_yellow',
+            '44': 'bg_blue', '45': 'bg_magenta', '46': 'bg_cyan', '47': 'bg_white',
+            '100': 'bg_bright_black', '101': 'bg_bright_red', '102': 'bg_bright_green',
+            '103': 'bg_bright_yellow', '104': 'bg_bright_blue', '105': 'bg_bright_magenta',
+            '106': 'bg_bright_cyan', '107': 'bg_bright_white',
+        }
+        
+        for code in codes:
+            if code == '0':  # Reset
+                tags = []
+            elif code == '1':  # Bold
+                tags.append('bold')
+            elif code == '4':  # Underline
+                tags.append('underline')
+            elif code == '3':  # Italic
+                tags.append('italic')
+            elif code in color_map:
+                # Rimuovi vecchi tag dello stesso tipo (fg o bg)
+                tag_type = 'fg_' if code.startswith(('3', '9')) else 'bg_'
+                tags = [t for t in tags if not t.startswith(tag_type)]
+                tags.append(color_map[code])
+        
+        return tags
+
+    def start_conpty(self):
+        """Avvia un terminale PowerShell usando ConPTY"""
+        try:
+            import winpty
+            
+            # Crea un processo ConPTY con PowerShell
+            cols = self.terminal_output.cget("width")
+            rows = self.terminal_output.cget("height")
+            
+            self.pty = winpty.PTY(cols, rows)
+            
+            # Avvia PowerShell nel PTY
+            self.pty.spawn("powershell.exe -NoLogo -NoExit")
+            
+            # Thread per leggere l'output
+            self.output_thread = threading.Thread(target=self.read_pty_output, daemon=True)
+            self.output_thread.start()
+            
+            # Thread per aggiornare la GUI
+            self.update_thread = threading.Thread(target=self.update_terminal, daemon=True)
+            self.update_thread.start()
+            
+            self.write_to_terminal("🚀 Terminale PowerShell ConPTY avviato\n")
+            
+        except Exception as e:
+            self.write_to_terminal(f"❌ Errore avvio ConPTY: {e}\n")
+            self.write_to_terminal("⚠️ Assicurati di aver installato: pip install pywinpty\n")
+
+    def read_pty_output(self):
+        """Legge l'output dal PTY"""
+        while self.running and self.pty:
+            try:
+                data = self.pty.read()
+                if data:
+                    self.output_queue.put(data)
+            except EOFError:
+                break
+            except Exception as e:
+                if self.running:
+                    self.output_queue.put(f"\n❌ Errore lettura: {e}\n")
+                break
+
+    def update_terminal(self):
+        """Aggiorna il terminale con l'output dalla coda"""
+        while self.running:
+            try:
+                content = self.output_queue.get(timeout=0.1)
+                if content:
+                    self.write_to_terminal(content)
+            except queue.Empty:
+                continue
+            except Exception:
+                break
+
+    def write_to_terminal(self, text):
+        """Scrive nel terminale interpretando i codici ANSI"""
+        try:
+            self.terminal_output.configure(state=tk.NORMAL)
+            
+            # Filtra alcuni codici di controllo che causano problemi
+            import re
+            # Rimuovi codici di posizionamento cursore e altri codici non supportati
+            text = re.sub(r'\x1b\[\?[0-9]+[hl]', '', text)  # ?1004h, ?9001h, etc.
+            text = re.sub(r'\x1b\[[0-9]+;[0-9]+[Hf]', '', text)  # Posizionamento cursore
+            text = re.sub(r'\x1b\[[0-9]*[ABCDEFGJKST]', '', text)  # Movimenti cursore
+            text = re.sub(r'\x1b\[c', '', text)  # Device attributes
+            text = re.sub(r'\x1b\[[0-9]*t', '', text)  # Window manipulation
+            text = re.sub(r'\x0d', '', text)  # Rimuovi carriage return
+            
+            # Parse ANSI e scrivi con colori
+            segments = self.parse_ansi_codes(text)
+            
+            for text_segment, tags in segments:
+                if text_segment:
+                    if tags:
+                        self.terminal_output.insert(tk.END, text_segment, tuple(tags))
+                    else:
+                        self.terminal_output.insert(tk.END, text_segment)
+            
+            self.terminal_output.see(tk.END)
+            self.terminal_output.configure(state=tk.DISABLED)
+        except Exception as e:
+            # Fallback: scrivi senza formattazione
+            try:
+                self.terminal_output.configure(state=tk.NORMAL)
+                self.terminal_output.insert(tk.END, text)
+                self.terminal_output.see(tk.END)
+                self.terminal_output.configure(state=tk.DISABLED)
+            except:
+                pass
+
+    def send_input(self):
+        """Invia input al terminale"""
+        command = self.command_entry.get()
+        if command and self.pty:
+            try:
+                self.pty.write(command + "\r\n")
+                self.command_history.append(command)
+                self.history_index = len(self.command_history)
+                self.command_entry.delete(0, tk.END)
+            except Exception as e:
+                self.write_to_terminal(f"\n❌ Errore invio: {e}\n")
+
+    def send_interrupt(self):
+        """Invia CTRL+C al terminale"""
+        if self.pty:
+            try:
+                self.pty.write("\x03")  # CTRL+C
+                self.write_to_terminal("\n^C\n")
+            except Exception as e:
+                self.write_to_terminal(f"\n❌ Errore interrupt: {e}\n")
+
+    def clear_terminal(self):
+        """Pulisce il terminale"""
+        self.terminal_output.configure(state=tk.NORMAL)
+        self.terminal_output.delete(1.0, tk.END)
+        self.terminal_output.configure(state=tk.DISABLED)
+
+    def history_up(self, event):
+        """Naviga la storia comandi (su)"""
+        if self.command_history and self.history_index > 0:
+            self.history_index -= 1
+            self.command_entry.delete(0, tk.END)
+            self.command_entry.insert(0, self.command_history[self.history_index])
+
+    def history_down(self, event):
+        """Naviga la storia comandi (giù)"""
+        if self.command_history:
+            self.history_index = min(self.history_index + 1, len(self.command_history))
+            self.command_entry.delete(0, tk.END)
+            if self.history_index < len(self.command_history):
+                self.command_entry.insert(0, self.command_history[self.history_index])
+
+    def pack(self, **kwargs):
+        """Impacchetta il frame del terminale"""
+        self.terminal_frame.pack(**kwargs)
+
+    def execute_script_command(self, command):
+        """Esegue un comando script nel terminale (compatibilità con vecchia API)"""
+        if self.pty:
+            try:
+                self.pty.write(command + "\r\n")
+            except Exception as e:
+                self.write_to_terminal(f"\n❌ Errore esecuzione: {e}\n")
+
+    def close_terminal(self):
+        """Chiude il terminale (compatibilità con vecchia API)"""
+        self.destroy()
+
+    def destroy(self):
+        """Pulisce le risorse"""
+        self.running = False
+        if self.pty:
+            try:
+                self.pty.close()
+            except:
+                pass
+
 class IntegratedTerminal:
     def __init__(self, parent):
         self.parent = parent
@@ -1663,12 +2020,8 @@ bot_path, venv_path = get_valid_paths()
 activate_path = resolve_activate_path(venv_path)
 assert activate_path is not None, "Percorso di attivazione non trovato"
 
-# Variabile globale per il processo del terminale persistente
-persistent_terminal_process = None
-persistent_terminal_script = None
-
-# Inizializza il terminale integrato (solo per log)
-terminal = IntegratedTerminal(app)
+# Inizializza il nuovo terminale ConPTY integrato
+terminal = ConPTYTerminal(app)
 
 # === FUNZIONI APPLICAZIONE ===
 def select_path():
@@ -1688,54 +2041,6 @@ def select_path():
         selected_path = ""
         path_label.configure(text="Nessuna selezione")
 
-def open_persistent_terminal():
-    """Apre un terminale PowerShell persistente che rimane aperto per tutta la sessione"""
-    global persistent_terminal_process, persistent_terminal_script
-    
-    import tempfile
-    
-    # Crea uno script PowerShell persistente
-    persistent_terminal_script = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
-    
-    ps1_script = f"""# SHRI Upload Assistant - Terminale Persistente
-$Host.UI.RawUI.WindowTitle = "SHRI Upload Assistant Terminal"
-$Host.UI.RawUI.BackgroundColor = "Black"
-$Host.UI.RawUI.ForegroundColor = "Green"
-Clear-Host
-
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║     SHRI Upload Assistant - Terminale Persistente        ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "📁 Directory Bot: {bot_path}" -ForegroundColor Yellow
-Write-Host "🐍 Python venv: {venv_path if venv_path else 'Non trovato'}" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "✅ Terminale pronto! I comandi di upload appariranno qui." -ForegroundColor Green
-Write-Host "   Lascia questa finestra aperta durante l'utilizzo della GUI." -ForegroundColor Gray
-Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor DarkGray
-Write-Host ""
-
-# Cambia nella directory del bot
-Set-Location "{bot_path}"
-
-# Resta in attesa (il terminale rimane aperto)
-# Gli script temporanei verranno eseguiti in questa sessione
-"""
-    
-    persistent_terminal_script.write(ps1_script)
-    persistent_terminal_script.close()
-    
-    # Apre il terminale PowerShell persistente
-    persistent_terminal_process = subprocess.Popen([
-        "powershell.exe",
-        "-NoExit",
-        "-ExecutionPolicy", "Bypass",
-        "-File", persistent_terminal_script.name
-    ], creationflags=subprocess.CREATE_NEW_CONSOLE)
-    
-    return persistent_terminal_process
-
 def open_config_py():
     config_path = os.path.join(bot_path, "data", "config.py")
     if not os.path.exists(config_path):
@@ -1753,66 +2058,29 @@ def open_config_py():
 
 def run_git_pull():
     safe_update_status("🔄 Controllo aggiornamenti Bot...", "yellow")
-
-    # Apre un terminale esterno per git pull
-    import tempfile
-    temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
-    try:
-        ps1_script = f"""# Git Pull Script
-Set-Location "{bot_path}"
-Write-Host "Controllo aggiornamenti Upload-Assistant..." -ForegroundColor Cyan
-git pull
-Write-Host ""
-Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-"""
-        temp_ps1.write(ps1_script)
-        temp_ps1.close()
-        
-        subprocess.Popen([
-            "powershell.exe",
-            "-ExecutionPolicy", "Bypass",
-            "-File", temp_ps1.name
-        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
-        
-        safe_update_status("✅ Terminale git pull aperto", "green")
-    except Exception as e:
-        safe_update_status(f"❌ Errore: {e}", "red")
+    
+    # Esegue git pull nel terminale integrato
+    terminal.execute_script_command(f'cd "{bot_path}"')
+    terminal.execute_script_command('git pull')
+    
+    safe_update_status("✅ Comando git pull inviato", "green")
 
 def run_pip_install():
     safe_update_status("🔄 Controllo aggiornamenti pip...", "yellow")
-
-    # Apre un terminale esterno per pip install
-    import tempfile
-    temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
-    try:
-        if venv_path:
-            pip_exe = os.path.join(venv_path, "Scripts", "pip.exe")
-            if not os.path.exists(pip_exe):
-                pip_exe = "pip"
+    
+    # Esegue pip install nel terminale integrato
+    terminal.execute_script_command(f'cd "{bot_path}"')
+    
+    if venv_path:
+        pip_exe = os.path.join(venv_path, "Scripts", "pip.exe")
+        if os.path.exists(pip_exe):
+            terminal.execute_script_command(f'& "{pip_exe}" install -r requirements.txt')
         else:
-            pip_exe = "pip"
-            
-        ps1_script = f"""# Pip Install Script
-Set-Location "{bot_path}"
-Write-Host "Aggiornamento dipendenze..." -ForegroundColor Cyan
-& "{pip_exe}" install -r requirements.txt
-Write-Host ""
-Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-"""
-        temp_ps1.write(ps1_script)
-        temp_ps1.close()
-        
-        subprocess.Popen([
-            "powershell.exe",
-            "-ExecutionPolicy", "Bypass",
-            "-File", temp_ps1.name
-        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
-        
-        safe_update_status("✅ Terminale pip install aperto", "green")
-    except Exception as e:
-        safe_update_status(f"❌ Errore: {e}", "red")
+            terminal.execute_script_command('pip install -r requirements.txt')
+    else:
+        terminal.execute_script_command('pip install -r requirements.txt')
+    
+    safe_update_status("✅ Comando pip install inviato", "green")
 
 def run_ffmpeg_check():
     """Esegue un controllo manuale di FFmpeg e mostra informazioni dettagliate"""
@@ -1875,11 +2143,7 @@ def run_upload():
     if edition_value:
         upload_cmd += f" --edition {edition_value}"
 
-    # Esegue l'upload nel terminale integrato
-    # SOLUZIONE: Usa un file temporaneo .ps1 per evitare problemi di encoding via stdin
-    import tempfile
-    import time
-    
+    # Esegue l'upload nel terminale integrato con parser ANSI
     if venv_path:
         python_exe = os.path.join(venv_path, "Scripts", "python.exe")
         if os.path.exists(python_exe):
@@ -1904,58 +2168,17 @@ def run_upload():
             
             args_str = ' '.join(args)
             
-            # Escape delle doppie virgolette nel percorso
-            escaped_path = normalized_path.replace('"', '`"')
+            # Usa singole virgolette per il percorso
+            escaped_path = normalized_path.replace("'", "''")
             
-            # Crea un file PowerShell temporaneo con encoding UTF-8 con BOM
-            temp_ps1 = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
-            try:
-                # Scrive il comando nel file .ps1 con encoding UTF-8-BOM
-                # Il BOM forza PowerShell a riconoscere il file come UTF-8
-                # -u flag: unbuffered output per mostrare tutto in tempo reale
-                # PYTHONUNBUFFERED: forza Python a non bufferizzare stdout/stderr
-                ps1_script = f"""# SHRI Upload Script
-$env:PYTHONUNBUFFERED=1
-Set-Location "{bot_path}"
-& "{python_exe}" -u upload.py "{escaped_path}" {args_str}
-Write-Host ""
-Write-Host "Premi un tasto per chiudere questa finestra..." -ForegroundColor Green
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-"""
-                temp_ps1.write(ps1_script)
-                temp_ps1.close()
-                
-                # Apre un terminale PowerShell ESTERNO usando subprocess direttamente
-                # Questo è più affidabile che passare tramite il terminale integrato
-                subprocess.Popen([
-                    "powershell.exe",
-                    "-ExecutionPolicy", "Bypass",
-                    "-File", temp_ps1.name
-                ], creationflags=subprocess.CREATE_NEW_CONSOLE)
-                
-                # Pulisce il file temporaneo dopo molto tempo (lo script deve rimanere mentre il terminale è aperto)
-                def cleanup():
-                    time.sleep(60)  # Aspetta 1 minuto prima di cancellare
-                    try:
-                        os.unlink(temp_ps1.name)
-                    except:
-                        pass
-                threading.Thread(target=cleanup, daemon=True).start()
-                
-            except Exception as e:
-                safe_update_status(f"❌ Errore creazione script: {e}", "red")
-                try:
-                    os.unlink(temp_ps1.name)
-                except:
-                    pass
-                return
+            # Esegui nel terminale integrato
+            terminal.execute_script_command(f'cd "{bot_path}"')
+            terminal.execute_script_command(f'& "{python_exe}" -u upload.py \'{escaped_path}\' {args_str}')
         else:
             terminal.execute_script_command(f'cd "{bot_path}"')
-            time.sleep(0.5)
             terminal.execute_script_command(upload_cmd)
     else:
         terminal.execute_script_command(f'cd "{bot_path}"')
-        time.sleep(0.5)
         terminal.execute_script_command(upload_cmd)
 
     safe_update_status("✅ Upload avviato nel terminale...", "green")
@@ -2046,8 +2269,8 @@ ToolTip(config_btn, "Apri il file config.py per modificare la configurazione del
 status_label = ctk.CTkLabel(app, text="", text_color="green")
 status_label.pack(pady=10)
 
-# NON aggiungere il terminale integrato alla GUI - usiamo solo terminale esterno
-# Il terminale integrato rimane in memoria solo per eventuali log interni
+# Aggiungi il terminale ConPTY alla GUI
+terminal.pack(fill="both", expand=True, padx=10, pady=10)
 
 # === MODALITÀ VISUALIZZAZIONE ===
 def toggle_compact_mode():
@@ -2172,9 +2395,6 @@ app.after(1000, periodic_update)
 
 # Auto-rileva il layout migliore
 app.after(2000, auto_detect_best_layout)
-
-# Apre il terminale PowerShell persistente all'avvio
-app.after(500, open_persistent_terminal)
 
 ctk.CTkLabel(app, text="Authors: Tiberio87").pack(pady=5)
 
