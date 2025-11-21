@@ -59,7 +59,7 @@ def find_or_select_api_keys():
         with open(selected_file, 'r', encoding='utf-8') as f:
             keys = json.load(f)
         # Verifica che contenga almeno alcune chiavi previste
-        expected_keys = ['tmdb_api', 'imgbb_api', 'discord_webhook']
+        expected_keys = ['tmdb_api', 'ptscreens_api', 'discord_webhook']
         if not any(key in keys for key in expected_keys):
             messagebox.showerror(
                 "File non valido", 
@@ -149,12 +149,12 @@ def show_api_keys_dialog(current_keys, empty_keys):
     
     # Campi obbligatori e facoltativi
     required_fields = {"tmdb_api", "shri_api"}
-    optional_fields = {"imgbb_api", "discord_webhook", "qbit_url", "qbit_port", "qbit_user", "qbit_pass"}
+    optional_fields = {"ptscreens_api", "discord_webhook", "qbit_url", "qbit_port", "qbit_user", "qbit_pass"}
     
     # Descrizioni per ogni campo
     field_descriptions = {
         "tmdb_api": "TMDB API Key (per informazioni film/serie)",
-        "imgbb_api": "ImgBB API Key (per upload immagini)",
+        "ptscreens_api": "Ptscreens API Key (per upload immagini)",
         "shri_api": "SHRI API Key (per tracker)",
         "discord_webhook": "Discord Webhook URL (per notifiche)",
         "qbit_url": "qBittorrent URL (es: http://localhost)",
@@ -1185,7 +1185,7 @@ def patch_config(content: str, keys: dict) -> str:
     
     # Escape di tutte le keys che potrebbero contenere caratteri speciali
     tmdb_api_escaped = escape_for_regex(keys.get("tmdb_api", ""))
-    imgbb_api_escaped = escape_for_regex(keys.get("imgbb_api", ""))
+    ptscreensb_api_escaped = escape_for_regex(keys.get("ptscreens_api", ""))
     qbit_url_escaped = escape_for_regex(keys.get("qbit_url", "http://127.0.0.1"))
     qbit_port_escaped = escape_for_regex(keys.get("qbit_port", "8080"))
     qbit_user_escaped = escape_for_regex(keys.get("qbit_user", ""))
@@ -1193,7 +1193,7 @@ def patch_config(content: str, keys: dict) -> str:
     shri_api_escaped = escape_for_regex(keys.get("shri_api", ""))
     
     content = re.sub(r'"tmdb_api"\s*:\s*".*?"', f'"tmdb_api": "{tmdb_api_escaped}"', content)
-    content = re.sub(r'"imgbb_api"\s*:\s*".*?"', f'"imgbb_api": "{imgbb_api_escaped}"', content)
+    content = re.sub(r'"ptscreens_api"\s*:\s*".*?"', f'"ptscreens_api": "{ptscreens_api_escaped}"', content)
     content = re.sub(r'"qbit_url"\s*:\s*".*?"', f'"qbit_url": "{qbit_url_escaped}"', content)
     content = re.sub(r'"qbit_port"\s*:\s*".*?"', f'"qbit_port": "{qbit_port_escaped}"', content)
     content = re.sub(r'"qbit_user"\s*:\s*".*?"', f'"qbit_user": "{qbit_user_escaped}"', content)
