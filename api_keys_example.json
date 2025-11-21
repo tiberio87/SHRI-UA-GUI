@@ -1,6 +1,6 @@
 {
     "tmdb_api": "IL_TUO_TMDB_API_KEY",
-    "imgbb_api": "IL_TUO_IMGBB_API_KEY",
+    "ptscreens_api": "IL_TUO_PTSCREENS_API_KEY",
     "shri_api": "IL_TUO_SHRI_API_KEY",
     "discord_webhook": "IL_TUO_DISCORD_WEBHOOK_URL",
     "qbit_url": "http://127.0.0.1",
