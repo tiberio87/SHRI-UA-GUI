@@ -75,22 +75,29 @@ Prima di iniziare, assicurati di avere installato:
 
 1. **Git** - [Scarica da qui](https://git-scm.com/install/windows)
 2. **Python 3.9+** - [Scarica da qui](https://www.python.org/downloads/)
+   - ⚠️ Durante l'installazione, assicurati di spuntare **"Add Python to PATH"**
 3. **FFmpeg** - Installa da un terminale PowerShell con: `winget install ffmpeg`
 
 ### 🚀 **Installazione Rapida:**
 
-1. **Scarica l'applicazione:**
-   - Clona questa repository: `git clone https://github.com/tiberio87/SHRI-UA-GUI`
-   - Oppure scarica lo ZIP dai [Releases](https://github.com/tiberio87/SHRI-UA-GUI/releases)
+1. **Scarica ed estrai l'applicazione:**
+   - **Scarica lo ZIP** dai [Releases](https://github.com/tiberio87/SHRI-UA-GUI/releases)
+   - **Estrai lo ZIP sul Desktop** (consigliato per evitare problemi di permessi)
+   - Dovresti ottenere una cartella `SHRI-UA-GUI` sul Desktop con questi file:
+     - `SHRI - Upload Assistant.py` (il file principale)
+     - `README.md`
+     - `requirements.txt`
+   - **Oppure** clona con Git: `git clone https://github.com/tiberio87/SHRI-UA-GUI`
+     - In questo caso ti consiglio di clonare direttamente sul Desktop: `cd Desktop` e poi `git clone ...`
 
-2. **Installa la dipendenza GUI:**
+2. **Installa le dipendenze GUI:**
    - Apri PowerShell o Prompt dei Comandi
-   - Esegui: `pip install customtkinter pywinpty`
+   - Esegui: `pip install customtkinter`
    - Queste sono le uniche dipendenze necessarie per avviare la GUI
 
-3. **Prepara il file API Keys:**
-   - Crea un file `api_keys.json` nella stessa cartella dell'applicazione
-   - Struttura minima richiesta:
+3. **Crea il file API Keys:**
+   - **Apri il Blocco Note** (o un editor di testo)
+   - **Copia e incolla** questa struttura:
    ```json
    {
      "tmdb_api": "la_tua_api_key_tmdb",
@@ -103,9 +110,32 @@ Prima di iniziare, assicurati di avere installato:
      "qbit_pass": ""
    }
    ```
+   - **Sostituisci** `la_tua_api_key_tmdb` e `la_tua_api_key_shri` con le tue chiavi vere
+   - **Salva il file** come `api_keys.json` nella cartella `SHRI-UA-GUI` sul Desktop
+   - **Percorso finale esempio**: `C:\Users\TuoNome\Desktop\SHRI-UA-GUI\api_keys.json`
+   - ⚠️ **IMPORTANTE**: 
+     - Il file deve stare **nella stessa cartella** dove si trova `SHRI - Upload Assistant.py`
+     - Il file deve chiamarsi esattamente `api_keys.json` (NON `api_keys.json.txt`)
+     - Quando salvi, seleziona "Tutti i file" come tipo, non "File di testo"
 
 4. **Avvia l'applicazione:**
-   - Esegui: `python "SHRI - Upload Assistant.py"`
+   
+   **Metodo consigliato (da terminale):**
+   - Apri **PowerShell** o **Prompt dei Comandi**
+   - **Spostati nella cartella** dove hai estratto i file:
+     ```powershell
+     cd Desktop\SHRI-UA-GUI
+     ```
+   - **Avvia il programma** con Python:
+     ```powershell
+     python '.\SHRI - Upload Assistant.py'
+     ```
+   
+   **Perché non funziona il doppio click?**
+   - Se facendo doppio click sul file `.py` non succede nulla o si apre con un editor di testo, significa che i file Python non sono associati correttamente al Python Launcher
+   - Il modo più semplice e affidabile è **sempre usare il terminale** come mostrato sopra
+   
+   **Prima esecuzione:**
    - Al primo avvio, clicca **"Setup da locale"**
    - L'applicazione farà tutto automaticamente:
      - ✅ Controlla le dipendenze di sistema

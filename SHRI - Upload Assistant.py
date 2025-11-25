@@ -81,7 +81,7 @@ def validate_and_fill_api_keys(keys_file):
             keys = json.load(f)
         
         # Campi obbligatori che devono essere sempre presenti
-        required_fields = {"tmdb_api", "shri_api"}
+        required_fields = {"tmdb_api", "shri_api", "ptscreens_api"}
         
         # Controlla se ci sono valori vuoti nei campi obbligatori
         missing_required = [key for key in required_fields if not keys.get(key, "").strip()]
@@ -148,8 +148,8 @@ def show_api_keys_dialog(current_keys, empty_keys):
     entry_widgets = {}
     
     # Campi obbligatori e facoltativi
-    required_fields = {"tmdb_api", "shri_api"}
-    optional_fields = {"ptscreens_api", "discord_webhook", "qbit_url", "qbit_port", "qbit_user", "qbit_pass"}
+    required_fields = {"tmdb_api", "shri_api", "ptscreens_api"}
+    optional_fields = {"discord_webhook", "qbit_url", "qbit_port", "qbit_user", "qbit_pass"}
     
     # Descrizioni per ogni campo
     field_descriptions = {
