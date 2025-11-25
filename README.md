@@ -92,7 +92,7 @@ Prima di iniziare, assicurati di avere installato:
 
 2. **Installa le dipendenze GUI:**
    - Apri PowerShell o Prompt dei Comandi
-   - Esegui: `pip install customtkinter`
+   - Esegui: `pip install customtkinter pywinpty`
    - Queste sono le uniche dipendenze necessarie per avviare la GUI
 
 3. **Crea il file API Keys:**
@@ -102,7 +102,7 @@ Prima di iniziare, assicurati di avere installato:
    {
      "tmdb_api": "la_tua_api_key_tmdb",
      "shri_api": "la_tua_api_key_shri",
-     "ptscreens_api": "",
+     "ptscreens_api": "la_tua_api_key_ptscreens",
      "discord_webhook": "",
      "qbit_url": "http://localhost",
      "qbit_port": "8080",
@@ -110,7 +110,7 @@ Prima di iniziare, assicurati di avere installato:
      "qbit_pass": ""
    }
    ```
-   - **Sostituisci** `la_tua_api_key_tmdb` e `la_tua_api_key_shri` con le tue chiavi vere
+   - **Sostituisci** `la_tua_api_key_tmdb` e `la_tua_api_key_shri` e `la_tua_api_key_ptscreens` con le tue chiavi vere
    - **Salva il file** come `api_keys.json` nella cartella `SHRI-UA-GUI` sul Desktop
    - **Percorso finale esempio**: `C:\Users\TuoNome\Desktop\SHRI-UA-GUI\api_keys.json`
    - ⚠️ **IMPORTANTE**: 
@@ -149,7 +149,7 @@ Prima di iniziare, assicurati di avere installato:
 
 **Dove ottenere le chiavi:**
 - **TMDB API**: [Registrati su TMDB](https://www.themoviedb.org/settings/api)
-- **PTscreens API**: [Registrati su PTScreens](https://https://ptscreens.com/)
+- **PTscreens API**: [Registrati su PTScreens](https://ptscreens.com/)
 - **SHRI API**: Fornita dal tracker
 
 **Durante il setup automatico:**
