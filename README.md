@@ -201,7 +201,7 @@ Se preferisci configurare tutto manualmente:
 Per aggiornare questa GUI:
 ```bash
 cd SHRI-UA-GUI
-git pull origin main
+git pull origin master
 ```
 
 ## **Troubleshooting:**
