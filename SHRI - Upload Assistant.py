@@ -1542,7 +1542,7 @@ def patch_config(content: str, keys: dict) -> str:
     
     # Escape di tutte le keys che potrebbero contenere caratteri speciali
     tmdb_api_escaped = escape_for_regex(keys.get("tmdb_api", ""))
-    ptscreensb_api_escaped = escape_for_regex(keys.get("ptscreens_api", ""))
+    ptscreens_api_escaped = escape_for_regex(keys.get("ptscreens_api", ""))
     qbit_url_escaped = escape_for_regex(keys.get("qbit_url", "http://127.0.0.1"))
     qbit_port_escaped = escape_for_regex(keys.get("qbit_port", "8080"))
     qbit_user_escaped = escape_for_regex(keys.get("qbit_user", ""))
