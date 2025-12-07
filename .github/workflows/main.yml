@@ -41,7 +41,7 @@ jobs:
       - name: Rename executable
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            mv dist/${{ env.COMPILE_PY }}.exe dist/${{ env.APP_BASE_NAME }}-windows.exe
+            mv "dist/${{ env.COMPILE_PY }}.exe" "dist/${{ env.APP_BASE_NAME }}-windows.exe"
           fi
 #        run: |
 #          if [[ "$RUNNER_OS" == "Windows" ]]; then
