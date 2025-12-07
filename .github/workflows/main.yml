@@ -12,11 +12,14 @@ env:
   APP_BASE_NAME: "SHRI-Upload-Assistant-GUI-${{ github.event.inputs.version }}"
   
 
+# macOS and linux build is disabled due to incompatibility with pywinpty
+
 jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
+#       os: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -39,11 +42,15 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             mv dist/${{ env.COMPILE_PY }}.exe dist/${{ env.APP_BASE_NAME }}-windows.exe
-          elif [[ "$RUNNER_OS" == "Linux" ]]; then
-            mv dist/${{ env.COMPILE_PY }} dist/${{ env.APP_BASE_NAME }}-linux
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            mv dist/${{ env.COMPILE_PY }} dist/${{ env.APP_BASE_NAME }}-macos
           fi
+#        run: |
+#          if [[ "$RUNNER_OS" == "Windows" ]]; then
+#            mv dist/${{ env.COMPILE_PY }}.exe dist/${{ env.APP_BASE_NAME }}-windows.exe
+#          elif [[ "$RUNNER_OS" == "Linux" ]]; then
+#            mv dist/${{ env.COMPILE_PY }} dist/${{ env.APP_BASE_NAME }}-linux
+#          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+#            mv dist/${{ env.COMPILE_PY }} dist/${{ env.APP_BASE_NAME }}-macos
+#          fi          
         shell: bash
 
       - name: Upload artifact
@@ -68,8 +75,8 @@ jobs:
       - name: List downloaded files (Debugging)
         run: ls -R
 
-      - name: Make files executable (Linux/Mac)
-        run: chmod +x ${{ env.APP_BASE_NAME }}-* || true
+#      - name: Make files executable (Linux/Mac)
+#        run: chmod +x ${{ env.APP_BASE_NAME }}-* || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -79,6 +86,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ${{ env.APP_BASE_NAME }}-linux
-            ${{ env.APP_BASE_NAME }}-windows.exe
-            ${{ env.APP_BASE_NAME }}-macos
+             ${{ env.APP_BASE_NAME }}-windows.exe
+#            ${{ env.APP_BASE_NAME }}-linux
+#            ${{ env.APP_BASE_NAME }}-macos
