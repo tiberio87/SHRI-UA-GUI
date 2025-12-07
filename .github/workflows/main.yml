@@ -86,6 +86,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-             "${{ env.APP_BASE_NAME }}-windows.exe"
+             ${{ env.APP_BASE_NAME }}-windows.exe
 #            ${{ env.APP_BASE_NAME }}-linux
 #            ${{ env.APP_BASE_NAME }}-macos
