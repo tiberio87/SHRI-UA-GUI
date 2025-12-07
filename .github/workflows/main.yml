@@ -36,7 +36,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build executable
-        run: pyinstaller --onefile -w ${{ env.COMPILE_PY }}.py
+        run: pyinstaller --onefile -w "${{ env.COMPILE_PY }}.py"
 
       - name: Rename executable
         run: |
@@ -86,6 +86,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-             ${{ env.APP_BASE_NAME }}-windows.exe
+             "${{ env.APP_BASE_NAME }}-windows.exe"
 #            ${{ env.APP_BASE_NAME }}-linux
 #            ${{ env.APP_BASE_NAME }}-macos
