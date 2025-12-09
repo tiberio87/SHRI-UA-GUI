@@ -2116,6 +2116,10 @@ def run_upload():
     tracker = "SHRI"  # Tracker fisso impostato su SHRI
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
+    type_value = type_dropdown.get().strip()
+    # Ignora il valore se è il placeholder
+    if type_value == "Tipo rilascio (opzionale)":
+        type_value = ""
     tag_value = tag_entry.get().strip()
     service_value = service_entry.get().strip()
     edition_value = edition_entry.get().strip()
@@ -2136,6 +2140,8 @@ def run_upload():
         upload_cmd += f" --imdb {imdb_id}"
     if tmdb_id:
         upload_cmd += f" --tmdb {tmdb_id}"
+    if type_value:
+        upload_cmd += f" --type {type_value}"
     if tag_value:
         upload_cmd += f" --tag {tag_value}"
     if service_value:
@@ -2159,6 +2165,8 @@ def run_upload():
                 args.extend(['--imdb', imdb_id])
             if tmdb_id:
                 args.extend(['--tmdb', tmdb_id])
+            if type_value:
+                args.extend(['--type', type_value])
             if tag_value:
                 args.extend(['--tag', tag_value])
             if service_value:
@@ -2210,8 +2218,13 @@ imdb_entry.pack(side="left", padx=(10, 5), pady=10)
 ToolTip(imdb_entry, "Inserisci l'ID IMDb (opzionale) da imdb.com\nEsempio: tt0068646 per Il Padrino.")
 
 tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)", width=140)
-tmdb_entry.pack(side="left", padx=(5, 10), pady=10)
+tmdb_entry.pack(side="left", padx=(5, 5), pady=10)
 ToolTip(tmdb_entry, "Inserisci l'ID TMDB (opzionale) da TMDB.org\nEsempio: 550 per Fight Club.")
+
+type_dropdown = ctk.CTkComboBox(ids_inner_frame, values=["disc", "remux", "encode", "webdl", "web-dl", "webrip", "hdtv", "dvdrip"], width=140, state="readonly")
+type_dropdown.pack(side="left", padx=(5, 10), pady=10)
+type_dropdown.set("Tipo rilascio (opzionale)")
+ToolTip(type_dropdown, "Seleziona il tipo di rilascio\nDisc, Remux, Encode, WebDL, Web-DL, WebRip, HDTV, DVDRip")
 
 # === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA + EDIZIONE ===
 metadata_frame = ctk.CTkFrame(app)
