@@ -2117,8 +2117,8 @@ def run_upload():
     imdb_id = imdb_entry.get().strip()
     tmdb_id = tmdb_entry.get().strip()
     type_value = type_dropdown.get().strip()
-    # Ignora il valore se è il placeholder
-    if type_value == "Tipo rilascio (opzionale)":
+    # Ignora il valore se è "Nessuno" (rilevamento automatico)
+    if type_value == "Nessuno":
         type_value = ""
     tag_value = tag_entry.get().strip()
     service_value = service_entry.get().strip()
@@ -2221,10 +2221,10 @@ tmdb_entry = ctk.CTkEntry(ids_inner_frame, placeholder_text="TMDB ID (opzionale)
 tmdb_entry.pack(side="left", padx=(5, 5), pady=10)
 ToolTip(tmdb_entry, "Inserisci l'ID TMDB (opzionale) da TMDB.org\nEsempio: 550 per Fight Club.")
 
-type_dropdown = ctk.CTkComboBox(ids_inner_frame, values=["disc", "remux", "encode", "webdl", "web-dl", "webrip", "hdtv", "dvdrip"], width=140, state="readonly")
+type_dropdown = ctk.CTkComboBox(ids_inner_frame, values=["Nessuno", "disc", "remux", "encode", "webdl", "web-dl", "webrip", "hdtv", "dvdrip"], width=140, state="readonly")
 type_dropdown.pack(side="left", padx=(5, 10), pady=10)
-type_dropdown.set("Tipo rilascio (opzionale)")
-ToolTip(type_dropdown, "Seleziona il tipo di rilascio\nDisc, Remux, Encode, WebDL, Web-DL, WebRip, HDTV, DVDRip")
+type_dropdown.set("Nessuno")
+ToolTip(type_dropdown, "Seleziona il tipo di rilascio o lascia 'Nessuno' per rilevamento automatico\nDisc, Remux, Encode, WebDL, Web-DL, WebRip, HDTV, DVDRip")
 
 # === SECONDA RIGA: TAG + GRUPPO + PIATTAFORMA + EDIZIONE ===
 metadata_frame = ctk.CTkFrame(app)
