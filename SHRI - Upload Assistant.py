@@ -2082,28 +2082,36 @@ def run_pip_install():
     
     safe_update_status("✅ Comando pip install inviato", "green")
 
-def run_ffmpeg_check():
-    """Esegue un controllo manuale di FFmpeg e mostra informazioni dettagliate"""
-    safe_update_status("🎬 Controllo FFmpeg...", "yellow")
-    
-    is_available, info = check_ffmpeg_availability()
-    
-    if is_available:
-        safe_update_status("✅ FFmpeg verificato", "green")
-        messagebox.showinfo(
-            "FFmpeg Status",
-            f"✅ FFmpeg è installato e funzionante!\n\n{info}\n\n"
-            "🎬 L'Upload Assistant può utilizzare tutte le funzionalità video."
-        )
-    else:
-        safe_update_status("❌ FFmpeg non trovato", "red")
-        response = messagebox.askyesno(
-            "FFmpeg non trovato",
-            f"❌ {info}\n\n"
-            "Vuoi vedere la guida di installazione?"
-        )
-        if response:
-            show_ffmpeg_installation_guide()
+def reset_gui():
+    """Riavvia completamente l'interfaccia grafica."""
+    safe_update_status("🔄 Riavvio interfaccia...", "yellow")
+
+    try:
+        terminal.destroy()
+    except Exception:
+        pass
+
+    def _restart():
+        if getattr(sys, "frozen", False):
+            executable = sys.executable
+            args = [executable] + sys.argv[1:]
+        else:
+            executable = sys.executable
+            script_path = os.path.abspath(sys.argv[0])
+            args = [executable, script_path] + sys.argv[1:]
+
+        try:
+            subprocess.Popen(args, cwd=os.getcwd())
+        except Exception as exc:
+            safe_update_status(f"❌ Riavvio fallito: {exc}", "red")
+            return
+
+        try:
+            app.destroy()
+        finally:
+            os._exit(0)
+
+    app.after(200, _restart)
 
 def run_upload():
     if not selected_path or not os.path.exists(selected_path):
@@ -2271,10 +2279,6 @@ pip_btn = ctk.CTkButton(app, text="Controlla aggiornamenti dipendenze", command=
 pip_btn.pack(pady=5)
 ToolTip(pip_btn, "Esegui pip install per aggiornare le dipendenze del progetto.")
 
-ffmpeg_check_btn = ctk.CTkButton(app, text="🎬 Test FFmpeg", command=run_ffmpeg_check, fg_color="purple", hover_color="darkmagenta", text_color="white")
-ffmpeg_check_btn.pack(pady=5)
-ToolTip(ffmpeg_check_btn, "Verifica se FFmpeg è installato e funzionante sul sistema.")
-
 config_btn = ctk.CTkButton(app, text="Modifica Config.py", command=open_config_py, fg_color="blue", hover_color="darkblue", text_color="white")
 config_btn.pack(pady=5)
 ToolTip(config_btn, "Apri il file config.py per modificare la configurazione del bot.")
@@ -2284,6 +2288,13 @@ status_label.pack(pady=10)
 
 # Aggiungi il terminale ConPTY alla GUI
 terminal.pack(fill="both", expand=True, padx=10, pady=10)
+
+bottom_buttons_frame = ctk.CTkFrame(app, fg_color="transparent")
+bottom_buttons_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+reset_btn = ctk.CTkButton(bottom_buttons_frame, text="Reset GUI", command=reset_gui, fg_color="red", hover_color="darkred", text_color="white")
+reset_btn.pack(side="right")
+ToolTip(reset_btn, "Chiude e riavvia l'interfaccia per applicare i cambiamenti o sbloccare la GUI.")
 
 # === MODALITÀ VISUALIZZAZIONE ===
 def toggle_compact_mode():
