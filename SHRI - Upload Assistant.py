@@ -384,6 +384,22 @@ class ConPTYTerminal:
         self.running = True
         self.ansi_buffer = ""
 
+        # Precompilazione pattern ANSI e gestione output rumoroso
+        self._ansi_pattern = re.compile(r'\x1b\[([0-9;]+)m')
+        self._ansi_cleanup_patterns = [
+            re.compile(r'\x1b\[\?[0-9]+[hl]'),
+            re.compile(r'\x1b\[[0-9]+;[0-9]+[Hf]'),
+            re.compile(r'\x1b\[[0-9]*[ABCDEFGJKST]'),
+            re.compile(r'\x1b\[c'),
+            re.compile(r'\x1b\[[0-9]*t'),
+        ]
+        self._progress_regex = re.compile(r'^\s*frame=\s*\d+.*time=.*speed=.*', re.IGNORECASE)
+        self._pending_progress = ""
+        self._last_progress_text = ""
+        self._last_progress_update = 0.0
+        self._progress_throttle = 0.25  # secondi tra refresh della barra di progresso
+        self._progress_after_id = None
+
         # Frame per il terminale
         self.terminal_frame = ctk.CTkFrame(parent)
 
@@ -509,16 +525,12 @@ class ConPTYTerminal:
 
     def parse_ansi_codes(self, text):
         """Parser ANSI che interpreta i codici e restituisce segmenti con tag"""
-        import re
-        
         segments = []
         current_tags = []
         
         # Pattern per codici ANSI: ESC[...m
-        ansi_pattern = re.compile(r'\x1b\[([0-9;]+)m')
-        
         pos = 0
-        for match in ansi_pattern.finditer(text):
+        for match in self._ansi_pattern.finditer(text):
             # Testo prima del codice ANSI
             if match.start() > pos:
                 text_segment = text[pos:match.start()]
@@ -621,7 +633,23 @@ class ConPTYTerminal:
         while self.running:
             try:
                 content = self.output_queue.get(timeout=0.1)
-                if content:
+                if not content:
+                    continue
+
+                # Aggrega eventuali altri chunk già presenti in coda per ridurre
+                # il numero di aggiornamenti sulla GUI
+                try:
+                    while True:
+                        extra = self.output_queue.get_nowait()
+                        if extra:
+                            content += extra
+                except queue.Empty:
+                    pass
+
+                # Esegui l'aggiornamento sul thread principale Tkinter
+                if self.parent:
+                    self.parent.after(0, self.write_to_terminal, content)
+                else:
                     self.write_to_terminal(content)
             except queue.Empty:
                 continue
@@ -629,41 +657,130 @@ class ConPTYTerminal:
                 break
 
     def write_to_terminal(self, text):
-        """Scrive nel terminale interpretando i codici ANSI"""
+        """Scrive nel terminale interpretando i codici ANSI con throttling sui progress bar rumorosi."""
+        if not text:
+            return
+
+        try:
+            cleaned = self._strip_control_sequences(text)
+            parts = cleaned.split('\r')
+
+            for part in parts:
+                if not part:
+                    continue
+
+                if self._is_progress_line(part):
+                    self._pending_progress = part.strip()
+                    self._schedule_progress_flush()
+                    self._attempt_progress_append(force=False)
+                else:
+                    # Prima di scrivere output "normale" force-flusha eventuali progress rimasti
+                    self._attempt_progress_append(force=True, final=True)
+                    self._append_text(part)
+
+            # Se il chunk termina con newline assicura che l'ultima progress bar venga mostrata
+            if cleaned.endswith('\n'):
+                self._attempt_progress_append(force=True, final=True)
+
+        except Exception:
+            # Fallback: scrivi senza formattazione
+            try:
+                self.terminal_output.configure(state=tk.NORMAL)
+                self.terminal_output.insert(tk.END, text)
+                self.terminal_output.see(tk.END)
+            finally:
+                self.terminal_output.configure(state=tk.DISABLED)
+
+    def _strip_control_sequences(self, text: str) -> str:
+        cleaned = text
+        for pattern in self._ansi_cleanup_patterns:
+            cleaned = pattern.sub('', cleaned)
+        return cleaned
+
+    def _is_progress_line(self, text: str) -> bool:
+        stripped = text.strip()
+        if not stripped:
+            return False
+        return bool(self._progress_regex.match(stripped))
+
+    def _schedule_progress_flush(self):
+        if self._progress_after_id is not None or not self.parent:
+            return
+        delay = max(100, int(self._progress_throttle * 1000))
+        self._progress_after_id = self.parent.after(delay, self._delayed_progress_flush)
+
+    def _delayed_progress_flush(self):
+        self._progress_after_id = None
+        self._attempt_progress_append(force=True)
+
+    def _cancel_scheduled_progress(self):
+        if self._progress_after_id is not None and self.parent:
+            try:
+                self.parent.after_cancel(self._progress_after_id)
+            except Exception:
+                pass
+            finally:
+                self._progress_after_id = None
+
+    def _attempt_progress_append(self, force: bool = False, final: bool = False):
+        if not self._pending_progress:
+            if final:
+                self._cancel_scheduled_progress()
+            return
+
+        now = time.time()
+        should_write = False
+
+        if force:
+            if final or self._pending_progress != self._last_progress_text:
+                should_write = True
+        else:
+            progress_changed = self._pending_progress != self._last_progress_text
+            if progress_changed and (now - self._last_progress_update) >= self._progress_throttle:
+                should_write = True
+
+        if not should_write:
+            if final:
+                self._cancel_scheduled_progress()
+                self._pending_progress = ""
+            return
+
+        text = self._pending_progress.rstrip()
+        if not text:
+            self._pending_progress = ""
+            self._cancel_scheduled_progress()
+            return
+
+        if not text.endswith('\n'):
+            text += '\n'
+
+        self._append_text(text)
+        self._last_progress_update = now
+        self._last_progress_text = self._pending_progress
+
+        if final:
+            self._pending_progress = ""
+            self._last_progress_text = ""
+        self._cancel_scheduled_progress()
+
+    def _append_text(self, text: str):
+        if not text:
+            return
+
         try:
             self.terminal_output.configure(state=tk.NORMAL)
-            
-            # Filtra alcuni codici di controllo che causano problemi
-            import re
-            # Rimuovi codici di posizionamento cursore e altri codici non supportati
-            text = re.sub(r'\x1b\[\?[0-9]+[hl]', '', text)  # ?1004h, ?9001h, etc.
-            text = re.sub(r'\x1b\[[0-9]+;[0-9]+[Hf]', '', text)  # Posizionamento cursore
-            text = re.sub(r'\x1b\[[0-9]*[ABCDEFGJKST]', '', text)  # Movimenti cursore
-            text = re.sub(r'\x1b\[c', '', text)  # Device attributes
-            text = re.sub(r'\x1b\[[0-9]*t', '', text)  # Window manipulation
-            text = re.sub(r'\x0d', '', text)  # Rimuovi carriage return
-            
-            # Parse ANSI e scrivi con colori
             segments = self.parse_ansi_codes(text)
-            
+
             for text_segment, tags in segments:
                 if text_segment:
                     if tags:
                         self.terminal_output.insert(tk.END, text_segment, tuple(tags))
                     else:
                         self.terminal_output.insert(tk.END, text_segment)
-            
+
             self.terminal_output.see(tk.END)
+        finally:
             self.terminal_output.configure(state=tk.DISABLED)
-        except Exception as e:
-            # Fallback: scrivi senza formattazione
-            try:
-                self.terminal_output.configure(state=tk.NORMAL)
-                self.terminal_output.insert(tk.END, text)
-                self.terminal_output.see(tk.END)
-                self.terminal_output.configure(state=tk.DISABLED)
-            except:
-                pass
 
     def send_input(self):
         """Invia input al terminale"""
@@ -726,6 +843,7 @@ class ConPTYTerminal:
     def destroy(self):
         """Pulisce le risorse"""
         self.running = False
+        self._cancel_scheduled_progress()
         if self.pty:
             try:
                 self.pty.close()
