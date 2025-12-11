@@ -3,3 +3,10 @@
 /config_window.txt
 .venv/
 Upload-Assistant
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
